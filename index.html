@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>TVcabinet Clock</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <style>
+        /* Import Google Font 'Nunito' to mimic SF Pro Rounded */
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap');
+
+        :root {
+            --bg-color: #000000;
+            --color-a: #52a9ff;
+            --color-b: #52a9ff;
+            --color-c: color-mix(in srgb, white 80%, var(--color-a));
+            --text-color-night: #ff0000;
+            --dim-opacity: 0.3;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #clock-container {
+            text-align: center;
+            transition: transform 60s linear;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #time-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            position: relative;
+        }
+
+        #time {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 35vw;
+            line-height: 0.8;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            position: relative;
+            transition: font-size 0.5s ease;
+        }
+
+        .digit-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 0 -1vw;
+            width: 22vw;
+            height: 28vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: width 0.5s ease, margin 0.5s ease;
+        }
+
+        .digit {
+            position: absolute;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 3s ease, color 2s ease;
+            mix-blend-mode: screen;
+            opacity: 0.9;
+            will-change: transform, opacity, color;
+        }
+
+        .digit-wrapper:nth-child(1) .digit,
+        .digit-wrapper:nth-child(4) .digit {
+            color: var(--color-a);
+        }
+
+        .digit-wrapper:nth-child(2) .digit,
+        .digit-wrapper:nth-child(5) .digit {
+            color: var(--color-b);
+        }
+
+        .colon {
+            font-size: 20vw;
+            margin: 0 -1vw;
+            padding-bottom: 2vw;
+            color: var(--color-c);
+            mix-blend-mode: screen;
+            position: relative;
+            z-index: 2;
+            transition: color 2s ease, font-size 0.5s ease, margin 0.5s ease, padding-bottom 0.5s ease;
+        }
+
+        #ampm {
+            font-size: 5vw;
+            font-weight: 800;
+            color: var(--color-c);
+            margin-left: 2vw;
+            opacity: 0;
+            transition: opacity 0.5s ease, color 2s ease, font-size 0.5s ease, margin-left 0.5s ease;
+            width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        #ampm.visible {
+            opacity: 1;
+            width: auto;
+            margin-left: 2vw;
+        }
+
+        .mode-12h #time {
+            font-size: 38.5vw;
+        }
+
+        .mode-12h .digit-wrapper {
+            width: 20vw;
+            margin: 0 -0.5vw;
+        }
+
+        .mode-12h .colon {
+            font-size: 22vw;
+            margin: 0 2vw;
+            padding-bottom: 2.5vw;
+            opacity: 1;
+        }
+
+        .mode-12h #ampm {
+            font-size: 5.5vw;
+            margin-left: 4vw;
+        }
+
+        body.hide-date #date {
+            display: none !important;
+            opacity: 0 !important;
+        }
+
+        body.hide-date #time {
+            font-size: 45vw;
+        }
+
+        body.hide-date.mode-12h #time {
+            font-size: 48vw;
+        }
+
+        .blink {
+            animation: blinker 2s linear infinite;
+        }
+
+        @keyframes blinker {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        #date {
+            font-size: 5vw;
+            margin-top: 1.5vw;
+            color: var(--color-a);
+            opacity: 0.8;
+            font-weight: 700;
+            letter-spacing: 2px;
+            transition: color 2s ease, opacity 0.5s ease;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 30;
+        }
+
+        body:active #controls,
+        body.show-controls #controls {
+            opacity: 1;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        body.night-mode {
+            --color-a: var(--text-color-night) !important;
+            --color-b: var(--text-color-night) !important;
+            --color-c: var(--text-color-night) !important;
+        }
+
+        body.night-mode .digit,
+        body.night-mode .colon {
+            mix-blend-mode: normal;
+            opacity: 0.5;
+            filter: none;
+        }
+
+        body.night-mode #ampm.visible {
+            mix-blend-mode: normal;
+            opacity: 0.5;
+            filter: none;
+        }
+
+        body.night-mode #date {
+            color: var(--text-color-night);
+            opacity: 0.4;
+        }
+
+        #night-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            z-index: 20;
+        }
+
+        #nosleep-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 1px;
+            opacity: 0.01;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="clock-container">
+        <div id="time-row">
+            <div id="time"></div>
+            <div id="ampm">AM</div>
+        </div>
+        <div id="date">1月1日 星期一</div>
+    </div>
+
+    <div id="night-overlay"></div>
+
+    <div id="controls">
+        <button class="btn" id="toggle-palette">🎨 換色</button>
+        <button class="btn" id="toggle-format">🕒 24H</button>
+        <button class="btn" id="toggle-date">📅 日期: 開</button>
+        <button class="btn" id="toggle-blink">✨ 閃爍: 開</button>
+        <button class="btn" id="toggle-night">🌙 夜間模式</button>
+        <button class="btn" id="toggle-nosleep">⚡ 保持常亮 (未啟用)</button>
+    </div>
+
+    <video id="nosleep-video" playsinline loop muted>
+        <source
+            src="data:video/mp4;base64,AAAAHGZ0eXBNNEVAAAAAAAEAAAEAAAABAAAABAAAAA1tb292AAAAbG12aGQAAAAA6mLSZOpikmQAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAABudHJhawAAAFx0a2hkAAAAAOpikmTqYpJkAAAAAQAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAQAAAAEAAAAAAQAAAAEAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAAQAAAAABAAAAAAABAAAAGW1kaWEAAAAgbWRoZAAAAADqYpJk6mKSZAAAAQAAAAEAAAAAAhAAABh1ZHRhAAAAOG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABsAAABkYXRhAAAAAQAAAABMYXZmNTguMjkuMTAwAAAAQW1pbmYAAAAQdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAACxzdGJsAAAAJHN0c2QAAAAAAAAAAQAAABRhdmMxAAAAAAAAAAEAAAABAAAAFHR0cwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzegAAAAAAAAABAAAAAQAAABRzdGNvAAAAAAAAAAEAAAAsAAAAYXVkdGEAAAAXbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpYWFwcGwAAAAAAAAAAAAAAAAHaWxzdAAAABKpdG9vAAAAKgAAAGRhdGEAAAABAAAAAExhdmY1OC4yOS4xMDA="
+            type="video/mp4">
+    </video>
+
+    <script>
+        const BURN_IN_INTERVAL = 60000;
+        const MAX_JITTER = 20;
+
+        const PALETTES = [
+            ['#4facfe', '#00f2fe'], ['#ff0844', '#ffb199'], ['#0ba360', '#3cba92'],
+            ['#667eea', '#764ba2'], ['#f77062', '#fe5196'], ['#f6d365', '#fda085'],
+            ['#00c6fb', '#005bea'], ['#fa709a', '#fee140'], ['#43e97b', '#38f9d7'],
+            ['#ff6b6b', '#feca57'], ['#48dbfb', '#0abde3'], ['#ee5a6f', '#f39c12'],
+            ['#5f27cd', '#341f97'], ['#00d2d3', '#1dd1a1'], ['#ff9ff3', '#feca57'],
+            ['#54a0ff', '#2e86de'], ['#ff6348', '#ff4757'], ['#1abc9c', '#16a085'],
+            ['#e056fd', '#686de0'], ['#ffd32a', '#ff8c00']
+        ];
+
+        let isNightMode = false, isNoSleepEnabled = false, isBlinking = true;
+        let is24Hour = true, isDateVisible = true, currentPaletteIndex = 0, lastHours = '';
+
+        const video = document.getElementById('nosleep-video');
+        const body = document.body;
+        const nightOverlay = document.getElementById('night-overlay');
+        const btnNight = document.getElementById('toggle-night');
+        const btnNoSleep = document.getElementById('toggle-nosleep');
+        const btnBlink = document.getElementById('toggle-blink');
+        const btnFormat = document.getElementById('toggle-format');
+        const btnPalette = document.getElementById('toggle-palette');
+        const btnDate = document.getElementById('toggle-date');
+        const timeContainer = document.getElementById('time');
+        const clockContainer = document.getElementById('clock-container');
+        const ampmEl = document.getElementById('ampm');
+
+        function initClock() {
+            for (let i = 0; i < 5; i++) {
+                if (i === 2) {
+                    const colon = document.createElement('span');
+                    colon.className = 'colon blink';
+                    colon.textContent = ':';
+                    timeContainer.appendChild(colon);
+                } else {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'digit-wrapper';
+                    const digit = document.createElement('span');
+                    digit.className = 'digit';
+                    digit.textContent = '';
+                    wrapper.appendChild(digit);
+                    timeContainer.appendChild(wrapper);
+                }
+            }
+            updatePalette(false);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            let h = now.getHours();
+            const m = now.getMinutes();
+
+            if (!is24Hour) {
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                ampmEl.textContent = ampm;
+                ampmEl.classList.add('visible');
+                clockContainer.classList.add('mode-12h');
+            } else {
+                ampmEl.classList.remove('visible');
+                clockContainer.classList.remove('mode-12h');
+            }
+
+            const hoursStr = !is24Hour ? String(h) : String(h).padStart(2, '0');
+            const minutesStr = String(m).padStart(2, '0');
+            const h1 = hoursStr.length === 2 ? hoursStr[0] : '';
+            const h2 = hoursStr.length === 2 ? hoursStr[1] : hoursStr[0];
+
+            const rawHours = String(now.getHours()).padStart(2, '0');
+            if (rawHours !== lastHours && lastHours !== '') {
+                updatePalette(true);
+            }
+            lastHours = rawHours;
+
+            const wrappers = timeContainer.querySelectorAll('.digit-wrapper');
+            updateDigitInWrapper(wrappers[0], h1);
+            updateDigitInWrapper(wrappers[1], h2);
+            updateDigitInWrapper(wrappers[2], minutesStr[0]);
+            updateDigitInWrapper(wrappers[3], minutesStr[1]);
+
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+            document.getElementById('date').textContent = `${month}月${day}日 ${weekdays[now.getDay()]}`;
+        }
+
+        function updateDigitInWrapper(wrapper, newChar) {
+            const currentDigit = wrapper.querySelector('.digit:last-child');
+            const currentValue = currentDigit ? currentDigit.textContent : '';
+
+            if (currentValue !== newChar) {
+                const newDigit = document.createElement('span');
+                newDigit.className = 'digit';
+                newDigit.textContent = newChar;
+                newDigit.style.opacity = '0';
+
+                const rotation = Math.random() * 10 - 5;
+                const shiftX = (Math.random() - 0.5) * 2;
+                const shiftY = (Math.random() - 0.5) * 2;
+                newDigit.style.transform = `rotate(${rotation}deg) scale(0.8) translate(${shiftX}vw, ${shiftY}vw)`;
+                wrapper.appendChild(newDigit);
+
+                requestAnimationFrame(() => {
+                    newDigit.style.opacity = '1';
+                    newDigit.style.transform = `rotate(${rotation}deg) scale(1) translate(${shiftX}vw, ${shiftY}vw)`;
+                    if (currentDigit) {
+                        currentDigit.style.opacity = '0';
+                        const oldRot = Math.random() * 10 - 5;
+                        currentDigit.style.transform = `rotate(${oldRot}deg) scale(1.2) translate(${shiftX * 1.5}vw, ${shiftY * 1.5}vw)`;
+                        setTimeout(() => {
+                            if (currentDigit.parentNode === wrapper) wrapper.removeChild(currentDigit);
+                        }, 3000);
+                    }
+                });
+            }
+        }
+
+        function updatePalette(increment = true) {
+            if (isNightMode) return;
+            if (increment) currentPaletteIndex = (currentPaletteIndex + 1) % PALETTES.length;
+            const palette = PALETTES[currentPaletteIndex];
+            document.documentElement.style.setProperty('--color-a', palette[0]);
+            document.documentElement.style.setProperty('--color-b', palette[1]);
+        }
+
+        initClock();
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function applyJitter() {
+            const x = Math.floor(Math.random() * MAX_JITTER * 2) - MAX_JITTER;
+            const y = Math.floor(Math.random() * MAX_JITTER * 2) - MAX_JITTER;
+            clockContainer.style.transform = `translate(${x}px, ${y}px)`;
+        }
+        setInterval(applyJitter, BURN_IN_INTERVAL);
+
+        btnPalette.addEventListener('click', (e) => { e.stopPropagation(); updatePalette(true); });
+        btnBlink.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isBlinking = !isBlinking;
+            btnBlink.textContent = isBlinking ? '✨ 閃爍: 開' : '✨ 閃爍: 關';
+            const colon = document.querySelector('.colon');
+            if (colon) colon.classList.toggle('blink', isBlinking);
+        });
+        btnFormat.addEventListener('click', (e) => {
+            e.stopPropagation();
+            is24Hour = !is24Hour;
+            btnFormat.textContent = is24Hour ? '🕒 24H' : '🕒 12H';
+            updateClock();
+        });
+        btnDate.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isDateVisible = !isDateVisible;
+            btnDate.textContent = isDateVisible ? '📅 日期: 開' : '📅 日期: 關';
+            body.classList.toggle('hide-date', !isDateVisible);
+        });
+
+        function toggleNightMode() {
+            isNightMode = !isNightMode;
+            body.classList.toggle('night-mode', isNightMode);
+            nightOverlay.style.opacity = isNightMode ? '0.6' : '0';
+            btnNight.textContent = isNightMode ? '☀️ 日間模式' : '🌙 夜間模式';
+            if (!isNightMode) {
+                const palette = PALETTES[currentPaletteIndex];
+                document.documentElement.style.setProperty('--color-a', palette[0]);
+                document.documentElement.style.setProperty('--color-b', palette[1]);
+            }
+        }
+        btnNight.addEventListener('click', (e) => { e.stopPropagation(); toggleNightMode(); });
+
+        function enableNoSleep() {
+            video.play().then(() => {
+                isNoSleepEnabled = true;
+                btnNoSleep.textContent = '⚡ 常亮已啟用';
+                btnNoSleep.style.background = 'rgba(0, 255, 0, 0.3)';
+            }).catch((err) => {
+                console.error("NoSleep failed:", err);
+                alert("請點擊螢幕以啟用常亮模式");
+            });
+        }
+        btnNoSleep.addEventListener('click', (e) => { e.stopPropagation(); if (!isNoSleepEnabled) enableNoSleep(); });
+
+        body.addEventListener('click', () => {
+            body.classList.toggle('show-controls');
+            if (!isNoSleepEnabled) {
+                video.play().then(() => {
+                    isNoSleepEnabled = true;
+                    btnNoSleep.textContent = '⚡ 常亮已啟用';
+                    btnNoSleep.style.background = 'rgba(0, 255, 0, 0.3)';
+                }).catch(() => { });
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log('Service Worker Registered'))
+                .catch((err) => console.error('Service Worker Failed', err));
+        }
+    </script>
+</body>
+
+</html>
