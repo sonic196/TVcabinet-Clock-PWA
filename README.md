@@ -181,3 +181,5 @@
 - 設計靈感來自 Apple iOS 時鐘應用
 - 配色靈感來自 Adobe Color 與現代漸層設計
 - 字體使用 Google Fonts Nunito
+
+- 
