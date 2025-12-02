@@ -11,7 +11,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
     <style>
-        /* Import Google Font 'Nunito' to mimic SF Pro Rounded */
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap');
 
         :root {
@@ -20,7 +19,6 @@
             --color-b: #52a9ff;
             --color-c: color-mix(in srgb, white 80%, var(--color-a));
             --text-color-night: #ff0000;
-            --dim-opacity: 0.3;
         }
 
         body {
@@ -44,6 +42,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
         }
 
         #time-row {
@@ -170,18 +170,29 @@
             }
 
             50% {
-                opacity: 0;
+                opacity: 0.1;
             }
         }
 
         #date {
-            font-size: 5vw;
-            margin-top: 1.5vw;
+            font-size: 4vw;
+            margin-top: 0.5vw;
             color: var(--color-a);
             opacity: 0.8;
             font-weight: 700;
             letter-spacing: 2px;
             transition: color 2s ease, opacity 0.5s ease;
+        }
+
+        /* 橫向模式：日期移到右下角 */
+        @media (orientation: landscape) {
+            #date {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                margin-top: 0;
+                z-index: 25;
+            }
         }
 
         #controls {
@@ -209,6 +220,10 @@
             font-size: 14px;
             backdrop-filter: blur(10px);
             cursor: pointer;
+        }
+
+        .btn-text {
+            margin-left: 5px;
         }
 
         body.night-mode {
@@ -248,14 +263,143 @@
             z-index: 20;
         }
 
-        #nosleep-video {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 1px;
-            height: 1px;
-            opacity: 0.01;
-            pointer-events: none;
+        #minutes-row {
+            display: none;
+        }
+
+        /* Portrait Mode (縱向) */
+        @media (orientation: portrait) {
+            #clock-container {
+                justify-content: center;
+            }
+
+            #time-row {
+                flex-direction: column;
+                align-items: center;
+                gap: 0;
+            }
+
+            /* 小時：超大字體，緊湊交疊 */
+            #time {
+                font-size: 75vw;
+                line-height: 0.7;
+            }
+
+            .digit-wrapper {
+                width: 60vw;
+                height: 65vw;
+                margin: 0 -8vw;
+            }
+
+            /* 在縱向模式隱藏冒號和後兩位數字 */
+            #time .colon,
+            #time .digit-wrapper:nth-child(4),
+            #time .digit-wrapper:nth-child(5) {
+                display: none !important;
+            }
+
+            /* 小時數字使用顏色 A */
+            #time .digit-wrapper:nth-child(1) .digit,
+            #time .digit-wrapper:nth-child(2) .digit {
+                color: var(--color-a);
+            }
+
+            /* 顯示分鐘區域 */
+            #minutes-row {
+                display: flex;
+                align-items: baseline;
+                justify-content: center;
+                font-size: 75vw;
+                line-height: 0.7;
+                font-weight: 900;
+                letter-spacing: -0.05em;
+            }
+
+            #minutes-row .digit-wrapper {
+                position: relative;
+                display: inline-block;
+                margin: 0 -8vw;
+                width: 60vw;
+                height: 65vw;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            /* 分鐘數字使用顏色 B */
+            #minutes-row .digit {
+                position: absolute;
+                transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 3s ease, color 2s ease;
+                mix-blend-mode: screen;
+                opacity: 0.9;
+                will-change: transform, opacity, color;
+                color: var(--color-b);
+            }
+
+            /* 日期在中間，較小 */
+            #date {
+                font-size: 6vw;
+                margin-top: 1vw;
+                margin-bottom: 1vw;
+                order: 0;
+                position: relative;
+                bottom: auto;
+                right: auto;
+                z-index: 20;
+            }
+
+            /* 縱向模式：日期閃爍動畫 */
+            #date.blink {
+                animation: blinker 2s linear infinite;
+            }
+
+            /* 縱向模式隱藏 AM/PM（強制24H） */
+            #ampm {
+                display: none !important;
+            }
+
+            /* 縱向模式隱藏12H切換按鈕 */
+            #toggle-format {
+                display: none !important;
+            }
+
+            /* 按鈕單排橫向排列在底部 */
+            #controls {
+                bottom: max(10px, env(safe-area-inset-bottom));
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%);
+                flex-direction: row;
+                flex-wrap: nowrap;
+                justify-content: center;
+                gap: 8px;
+                max-width: 95vw;
+            }
+
+            .btn {
+                min-width: 45px;
+                padding: 10px;
+                font-size: 16px;
+            }
+
+            .btn-text {
+                display: none;
+            }
+
+            body.hide-date #time {
+                font-size: 85vw;
+            }
+
+            body.hide-date #minutes-row {
+                font-size: 85vw;
+            }
+
+            body.hide-date .digit-wrapper,
+            body.hide-date #minutes-row .digit-wrapper {
+                width: 70vw;
+                height: 75vw;
+                margin: 0 -10vw;
+            }
         }
     </style>
 </head>
@@ -264,27 +408,20 @@
     <div id="clock-container">
         <div id="time-row">
             <div id="time"></div>
-            <div id="ampm">AM</div>
+            <div id="date">1月1日 星期一</div>
+            <div id="minutes-row"></div>
         </div>
-        <div id="date">1月1日 星期一</div>
     </div>
 
     <div id="night-overlay"></div>
 
     <div id="controls">
-        <button class="btn" id="toggle-palette">🎨 換色</button>
-        <button class="btn" id="toggle-format">🕒 24H</button>
-        <button class="btn" id="toggle-date">📅 日期: 開</button>
-        <button class="btn" id="toggle-blink">✨ 閃爍: 開</button>
-        <button class="btn" id="toggle-night">🌙 夜間模式</button>
-        <button class="btn" id="toggle-nosleep">⚡ 保持常亮 (未啟用)</button>
+        <button class="btn" id="toggle-palette">🎨<span class="btn-text"> 換色</span></button>
+        <button class="btn" id="toggle-format">🕒<span class="btn-text"> 24H</span></button>
+        <button class="btn" id="toggle-date">📅<span class="btn-text"> 日期: 開</span></button>
+        <button class="btn" id="toggle-blink">✨<span class="btn-text"> 閃爍: 開</span></button>
+        <button class="btn" id="toggle-night">🌙<span class="btn-text"> 夜間模式</span></button>
     </div>
-
-    <video id="nosleep-video" playsinline loop muted>
-        <source
-            src="data:video/mp4;base64,AAAAHGZ0eXBNNEVAAAAAAAEAAAEAAAABAAAABAAAAA1tb292AAAAbG12aGQAAAAA6mLSZOpikmQAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAABudHJhawAAAFx0a2hkAAAAAOpikmTqYpJkAAAAAQAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAQAAAAEAAAAAAQAAAAEAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAAQAAAAABAAAAAAABAAAAGW1kaWEAAAAgbWRoZAAAAADqYpJk6mKSZAAAAQAAAAEAAAAAAhAAABh1ZHRhAAAAOG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABsAAABkYXRhAAAAAQAAAABMYXZmNTguMjkuMTAwAAAAQW1pbmYAAAAQdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAACxzdGJsAAAAJHN0c2QAAAAAAAAAAQAAABRhdmMxAAAAAAAAAAEAAAABAAAAFHR0cwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzegAAAAAAAAABAAAAAQAAABRzdGNvAAAAAAAAAAEAAAAsAAAAYXVkdGEAAAAXbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpYWFwcGwAAAAAAAAAAAAAAAAHaWxzdAAAABKpdG9vAAAAKgAAAGRhdGEAAAABAAAAAExhdmY1OC4yOS4xMDA="
-            type="video/mp4">
-    </video>
 
     <script>
         const BURN_IN_INTERVAL = 60000;
@@ -300,27 +437,26 @@
             ['#e056fd', '#686de0'], ['#ffd32a', '#ff8c00']
         ];
 
-        let isNightMode = false, isNoSleepEnabled = false, isBlinking = true;
+        let isNightMode = false, isBlinking = true;
         let is24Hour = true, isDateVisible = true, currentPaletteIndex = 0, lastHours = '';
 
-        const video = document.getElementById('nosleep-video');
         const body = document.body;
         const nightOverlay = document.getElementById('night-overlay');
         const btnNight = document.getElementById('toggle-night');
-        const btnNoSleep = document.getElementById('toggle-nosleep');
         const btnBlink = document.getElementById('toggle-blink');
         const btnFormat = document.getElementById('toggle-format');
         const btnPalette = document.getElementById('toggle-palette');
         const btnDate = document.getElementById('toggle-date');
         const timeContainer = document.getElementById('time');
+        const minutesContainer = document.getElementById('minutes-row');
         const clockContainer = document.getElementById('clock-container');
-        const ampmEl = document.getElementById('ampm');
+        let ampmEl;
 
         function initClock() {
             for (let i = 0; i < 5; i++) {
                 if (i === 2) {
                     const colon = document.createElement('span');
-                    colon.className = 'colon blink';
+                    colon.className = 'colon'; // 移除預設 blink class，由 updateBlinkingState 控制
                     colon.textContent = ':';
                     timeContainer.appendChild(colon);
                 } else {
@@ -333,8 +469,49 @@
                     timeContainer.appendChild(wrapper);
                 }
             }
+
+            for (let i = 0; i < 2; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'digit-wrapper';
+                const digit = document.createElement('span');
+                digit.className = 'digit';
+                digit.textContent = '';
+                wrapper.appendChild(digit);
+                minutesContainer.appendChild(wrapper);
+            }
+
+            ampmEl = document.createElement('div');
+            ampmEl.id = 'ampm';
+            ampmEl.textContent = 'AM';
+            minutesContainer.appendChild(ampmEl);
+
             updatePalette(false);
+            updateBlinkingState(); // 初始化閃爍狀態
         }
+
+        function updateBlinkingState() {
+            const btnText = btnBlink.querySelector('.btn-text');
+            if (btnText) btnText.textContent = isBlinking ? ' 閃爍: 開' : ' 閃爍: 關';
+
+            const colon = document.querySelector('.colon');
+            const dateEl = document.getElementById('date');
+            const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+
+            // 先移除所有閃爍
+            if (colon) colon.classList.remove('blink');
+            if (dateEl) dateEl.classList.remove('blink');
+
+            if (isBlinking) {
+                if (isPortrait) {
+                    if (dateEl) dateEl.classList.add('blink');
+                } else {
+                    if (colon) colon.classList.add('blink');
+                }
+            }
+        }
+
+        // 監聽螢幕旋轉以更新閃爍目標
+        window.matchMedia('(orientation: portrait)').addEventListener('change', updateBlinkingState);
 
         function updateClock() {
             const now = new Date();
@@ -368,6 +545,10 @@
             updateDigitInWrapper(wrappers[1], h2);
             updateDigitInWrapper(wrappers[2], minutesStr[0]);
             updateDigitInWrapper(wrappers[3], minutesStr[1]);
+
+            const minuteWrappers = minutesContainer.querySelectorAll('.digit-wrapper');
+            updateDigitInWrapper(minuteWrappers[0], minutesStr[0]);
+            updateDigitInWrapper(minuteWrappers[1], minutesStr[1]);
 
             const month = now.getMonth() + 1;
             const day = now.getDate();
@@ -429,20 +610,20 @@
         btnBlink.addEventListener('click', (e) => {
             e.stopPropagation();
             isBlinking = !isBlinking;
-            btnBlink.textContent = isBlinking ? '✨ 閃爍: 開' : '✨ 閃爍: 關';
-            const colon = document.querySelector('.colon');
-            if (colon) colon.classList.toggle('blink', isBlinking);
+            updateBlinkingState();
         });
         btnFormat.addEventListener('click', (e) => {
             e.stopPropagation();
             is24Hour = !is24Hour;
-            btnFormat.textContent = is24Hour ? '🕒 24H' : '🕒 12H';
+            const btnText = e.currentTarget.querySelector('.btn-text');
+            if (btnText) btnText.textContent = is24Hour ? ' 24H' : ' 12H';
             updateClock();
         });
         btnDate.addEventListener('click', (e) => {
             e.stopPropagation();
             isDateVisible = !isDateVisible;
-            btnDate.textContent = isDateVisible ? '📅 日期: 開' : '📅 日期: 關';
+            const btnText = e.currentTarget.querySelector('.btn-text');
+            if (btnText) btnText.textContent = isDateVisible ? ' 日期: 開' : ' 日期: 關';
             body.classList.toggle('hide-date', !isDateVisible);
         });
 
@@ -450,7 +631,8 @@
             isNightMode = !isNightMode;
             body.classList.toggle('night-mode', isNightMode);
             nightOverlay.style.opacity = isNightMode ? '0.6' : '0';
-            btnNight.textContent = isNightMode ? '☀️ 日間模式' : '🌙 夜間模式';
+            const btnText = btnNight.querySelector('.btn-text');
+            if (btnText) btnText.textContent = isNightMode ? ' 日間模式' : ' 夜間模式';
             if (!isNightMode) {
                 const palette = PALETTES[currentPaletteIndex];
                 document.documentElement.style.setProperty('--color-a', palette[0]);
@@ -459,27 +641,8 @@
         }
         btnNight.addEventListener('click', (e) => { e.stopPropagation(); toggleNightMode(); });
 
-        function enableNoSleep() {
-            video.play().then(() => {
-                isNoSleepEnabled = true;
-                btnNoSleep.textContent = '⚡ 常亮已啟用';
-                btnNoSleep.style.background = 'rgba(0, 255, 0, 0.3)';
-            }).catch((err) => {
-                console.error("NoSleep failed:", err);
-                alert("請點擊螢幕以啟用常亮模式");
-            });
-        }
-        btnNoSleep.addEventListener('click', (e) => { e.stopPropagation(); if (!isNoSleepEnabled) enableNoSleep(); });
-
         body.addEventListener('click', () => {
             body.classList.toggle('show-controls');
-            if (!isNoSleepEnabled) {
-                video.play().then(() => {
-                    isNoSleepEnabled = true;
-                    btnNoSleep.textContent = '⚡ 常亮已啟用';
-                    btnNoSleep.style.background = 'rgba(0, 255, 0, 0.3)';
-                }).catch(() => { });
-            }
         });
 
         if ('serviceWorker' in navigator) {
