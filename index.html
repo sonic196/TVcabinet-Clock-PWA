@@ -6,6 +6,7 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>TVcabinet Clock</title>
     <link rel="manifest" href="manifest.json">
@@ -106,8 +107,6 @@
             transition: color 2s ease, font-size 0.5s ease, margin 0.5s ease, padding-bottom 0.5s ease;
         }
 
-
-
         .mode-12h #time {
             font-size: 38.5vw;
         }
@@ -123,8 +122,6 @@
             padding-bottom: 2.5vw;
             opacity: 1;
         }
-
-
 
         body.hide-date #date {
             display: none !important;
@@ -155,24 +152,44 @@
             }
         }
 
+        /* Date and AM/PM - positioned outside clock-container */
         #date {
+            position: fixed;
             font-size: 4vw;
-            margin-top: 0.5vw;
             color: var(--color-a);
             opacity: 0.8;
             font-weight: 700;
             letter-spacing: 2px;
-            transition: color 2s ease, opacity 0.5s ease, position 0.3s ease, bottom 0.3s ease, right 0.3s ease;
+            z-index: 25;
+            transition: color 2s ease, opacity 0.5s ease;
         }
 
-        /* 橫向模式：日期移到右下角 */
+        #ampm-standalone {
+            position: fixed;
+            font-size: 5vw;
+            font-weight: 800;
+            color: var(--color-c);
+            opacity: 0;
+            display: none;
+            z-index: 25;
+            transition: opacity 0.5s ease, color 2s ease;
+        }
+
+        #ampm-standalone.visible {
+            opacity: 1;
+            display: block;
+        }
+
+        /* 橫向模式：日期和AM/PM在右下角 */
         @media (orientation: landscape) {
             #date {
-                position: fixed;
                 bottom: max(20px, env(safe-area-inset-bottom));
                 right: max(20px, env(safe-area-inset-right));
-                margin-top: 0;
-                z-index: 25;
+            }
+
+            #ampm-standalone {
+                bottom: max(55px, calc(env(safe-area-inset-bottom) + 35px));
+                right: max(20px, env(safe-area-inset-right));
             }
         }
 
@@ -219,8 +236,6 @@
             opacity: 0.5;
             filter: none;
         }
-
-
 
         body.night-mode #date {
             color: var(--text-color-night);
@@ -313,24 +328,20 @@
                 color: var(--color-b);
             }
 
-            /* 日期在中間，較小 - 重置 fixed 定位 */
+            /* 日期在螢幕中央，時間和分鐘之間 */
             #date {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
                 font-size: 6vw;
-                margin-top: 1vw;
-                margin-bottom: 1vw;
-                order: 0;
-                position: relative !important;
-                bottom: auto !important;
-                right: auto !important;
-                z-index: 20;
+                margin: 0;
             }
 
             /* 縱向模式：日期閃爍動畫 */
             #date.blink {
                 animation: blinker 2s linear infinite;
             }
-
-
 
             /* 縱向模式隱藏12H切換按鈕 */
             #toggle-format {
@@ -382,10 +393,12 @@
     <div id="clock-container">
         <div id="time-row">
             <div id="time"></div>
-            <div id="date">1月1日 星期一</div>
             <div id="minutes-row"></div>
         </div>
     </div>
+
+    <div id="date">1月1日 週一</div>
+    <div id="ampm-standalone"></div>
 
     <div id="night-overlay"></div>
 
@@ -424,7 +437,6 @@
         const timeContainer = document.getElementById('time');
         const minutesContainer = document.getElementById('minutes-row');
         const clockContainer = document.getElementById('clock-container');
-        let ampmEl;
 
         function initClock() {
             for (let i = 0; i < 5; i++) {
@@ -512,12 +524,23 @@
             const m = now.getMinutes();
 
             let ampmText = '';
+            const ampmStandalone = document.getElementById('ampm-standalone');
+
             if (!is24Hour) {
                 ampmText = h >= 12 ? 'PM' : 'AM';
                 h = h % 12 || 12;
                 clockContainer.classList.add('mode-12h');
+
+                // 如果日期隱藏，顯示獨立的 AM/PM
+                if (!isDateVisible) {
+                    ampmStandalone.textContent = ampmText;
+                    ampmStandalone.classList.add('visible');
+                } else {
+                    ampmStandalone.classList.remove('visible');
+                }
             } else {
                 clockContainer.classList.remove('mode-12h');
+                if (ampmStandalone) ampmStandalone.classList.remove('visible');
             }
 
             const hoursStr = !is24Hour ? String(h) : String(h).padStart(2, '0');
@@ -544,7 +567,7 @@
             const month = now.getMonth() + 1;
             const day = now.getDate();
             const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            const dateText = ampmText ? `${ampmText}｜${month}月${day}日 ${weekdays[now.getDay()]}` : `${month}月${day}日 ${weekdays[now.getDay()]}`;
+            const dateText = (ampmText && isDateVisible) ? `${ampmText}｜${month}月${day}日 ${weekdays[now.getDay()]}` : `${month}月${day}日 ${weekdays[now.getDay()]}`;
             document.getElementById('date').textContent = dateText;
         }
 
