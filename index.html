@@ -106,23 +106,7 @@
             transition: color 2s ease, font-size 0.5s ease, margin 0.5s ease, padding-bottom 0.5s ease;
         }
 
-        #ampm {
-            font-size: 5vw;
-            font-weight: 800;
-            color: var(--color-c);
-            margin-left: 2vw;
-            opacity: 0;
-            transition: opacity 0.5s ease, color 2s ease, font-size 0.5s ease, margin-left 0.5s ease;
-            width: 0;
-            overflow: hidden;
-            white-space: nowrap;
-        }
 
-        #ampm.visible {
-            opacity: 1;
-            width: auto;
-            margin-left: 2vw;
-        }
 
         .mode-12h #time {
             font-size: 38.5vw;
@@ -140,10 +124,7 @@
             opacity: 1;
         }
 
-        .mode-12h #ampm {
-            font-size: 5.5vw;
-            margin-left: 4vw;
-        }
+
 
         body.hide-date #date {
             display: none !important;
@@ -181,15 +162,15 @@
             opacity: 0.8;
             font-weight: 700;
             letter-spacing: 2px;
-            transition: color 2s ease, opacity 0.5s ease;
+            transition: color 2s ease, opacity 0.5s ease, position 0.3s ease, bottom 0.3s ease, right 0.3s ease;
         }
 
         /* 橫向模式：日期移到右下角 */
         @media (orientation: landscape) {
             #date {
                 position: fixed;
-                bottom: 20px;
-                right: 20px;
+                bottom: max(20px, env(safe-area-inset-bottom));
+                right: max(20px, env(safe-area-inset-right));
                 margin-top: 0;
                 z-index: 25;
             }
@@ -239,11 +220,7 @@
             filter: none;
         }
 
-        body.night-mode #ampm.visible {
-            mix-blend-mode: normal;
-            opacity: 0.5;
-            filter: none;
-        }
+
 
         body.night-mode #date {
             color: var(--text-color-night);
@@ -336,15 +313,15 @@
                 color: var(--color-b);
             }
 
-            /* 日期在中間，較小 */
+            /* 日期在中間，較小 - 重置 fixed 定位 */
             #date {
                 font-size: 6vw;
                 margin-top: 1vw;
                 margin-bottom: 1vw;
                 order: 0;
-                position: relative;
-                bottom: auto;
-                right: auto;
+                position: relative !important;
+                bottom: auto !important;
+                right: auto !important;
                 z-index: 20;
             }
 
@@ -353,10 +330,7 @@
                 animation: blinker 2s linear infinite;
             }
 
-            /* 縱向模式隱藏 AM/PM（強制24H） */
-            #ampm {
-                display: none !important;
-            }
+
 
             /* 縱向模式隱藏12H切換按鈕 */
             #toggle-format {
@@ -456,7 +430,7 @@
             for (let i = 0; i < 5; i++) {
                 if (i === 2) {
                     const colon = document.createElement('span');
-                    colon.className = 'colon'; // 移除預設 blink class，由 updateBlinkingState 控制
+                    colon.className = 'colon';
                     colon.textContent = ':';
                     timeContainer.appendChild(colon);
                 } else {
@@ -480,13 +454,15 @@
                 minutesContainer.appendChild(wrapper);
             }
 
-            ampmEl = document.createElement('div');
-            ampmEl.id = 'ampm';
-            ampmEl.textContent = 'AM';
-            minutesContainer.appendChild(ampmEl);
-
             updatePalette(false);
-            updateBlinkingState(); // 初始化閃爍狀態
+
+            // 初始化時檢查方向
+            const portraitQuery = window.matchMedia('(orientation: portrait)');
+            if (portraitQuery.matches) {
+                is24Hour = true;
+            }
+
+            updateBlinkingState();
         }
 
         function updateBlinkingState() {
@@ -510,22 +486,37 @@
             }
         }
 
-        // 監聽螢幕旋轉以更新閃爍目標
-        window.matchMedia('(orientation: portrait)').addEventListener('change', updateBlinkingState);
+        // 監聽螢幕旋轉
+        const portraitQuery = window.matchMedia('(orientation: portrait)');
+
+        function handleOrientationChange(e) {
+            console.log('Orientation changed:', e.matches ? 'Portrait' : 'Landscape');
+
+            // 更新閃爍狀態
+            updateBlinkingState();
+
+            // 縱向模式強制切換為 24H 制
+            if (e.matches) {
+                is24Hour = true;
+                const btnText = btnFormat.querySelector('.btn-text');
+                if (btnText) btnText.textContent = ' 24H';
+                updateClock();
+            }
+        }
+
+        portraitQuery.addEventListener('change', handleOrientationChange);
 
         function updateClock() {
             const now = new Date();
             let h = now.getHours();
             const m = now.getMinutes();
 
+            let ampmText = '';
             if (!is24Hour) {
-                const ampm = h >= 12 ? 'PM' : 'AM';
+                ampmText = h >= 12 ? 'PM' : 'AM';
                 h = h % 12 || 12;
-                ampmEl.textContent = ampm;
-                ampmEl.classList.add('visible');
                 clockContainer.classList.add('mode-12h');
             } else {
-                ampmEl.classList.remove('visible');
                 clockContainer.classList.remove('mode-12h');
             }
 
@@ -553,7 +544,8 @@
             const month = now.getMonth() + 1;
             const day = now.getDate();
             const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            document.getElementById('date').textContent = `${month}月${day}日 ${weekdays[now.getDay()]}`;
+            const dateText = ampmText ? `${ampmText}｜${month}月${day}日 ${weekdays[now.getDay()]}` : `${month}月${day}日 ${weekdays[now.getDay()]}`;
+            document.getElementById('date').textContent = dateText;
         }
 
         function updateDigitInWrapper(wrapper, newChar) {
@@ -607,11 +599,13 @@
         setInterval(applyJitter, BURN_IN_INTERVAL);
 
         btnPalette.addEventListener('click', (e) => { e.stopPropagation(); updatePalette(true); });
+
         btnBlink.addEventListener('click', (e) => {
             e.stopPropagation();
             isBlinking = !isBlinking;
             updateBlinkingState();
         });
+
         btnFormat.addEventListener('click', (e) => {
             e.stopPropagation();
             is24Hour = !is24Hour;
@@ -619,6 +613,7 @@
             if (btnText) btnText.textContent = is24Hour ? ' 24H' : ' 12H';
             updateClock();
         });
+
         btnDate.addEventListener('click', (e) => {
             e.stopPropagation();
             isDateVisible = !isDateVisible;
