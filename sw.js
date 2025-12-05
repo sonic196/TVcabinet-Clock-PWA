@@ -1,8 +1,8 @@
-const CACHE_NAME = 'clock-v8';
+const CACHE_NAME = 'clock-v10-test14';
 const ASSETS = [
     './',
     './index.html',
-    './index_v8.html',
+    './index_visual_test.html',
     './manifest.json',
     './icon.png'
 ];
