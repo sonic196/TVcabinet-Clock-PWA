@@ -742,30 +742,34 @@
             mask-composite: add;
             -webkit-mask-composite: source-over;
 
+            /* Initial Position (Y is dynamic via variable) */
             mask-position: 0px calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
             -webkit-mask-position: 0px calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+
+            /* Optimization */
+            will-change: mask-position;
 
             /* Transition for height matching */
             transition: --mask-y-px 1s linear, opacity 0.3s ease;
 
-            /* Animation: Continuous to sync phase */
-            animation: swap-wave-move 5s linear infinite;
+            /* Animation: Continuous to sync phase - Animate X ONLY */
+            animation: swap-wave-move-x 5s linear infinite;
         }
 
         body.swap-active.show-liquid #clock-container-swap {
             opacity: 1;
         }
 
-        @keyframes swap-wave-move {
+        @keyframes swap-wave-move-x {
             0% {
-                mask-position: 0px calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
-                -webkit-mask-position: 0px calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+                mask-position-x: 0px, 0px;
+                -webkit-mask-position-x: 0px, 0px;
             }
 
             100% {
                 /* Move exactly -100% of Mask Size (100vw) to match Main Wave speed */
-                mask-position: -100vw calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
-                -webkit-mask-position: -100vw calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+                mask-position-x: -100vw, 0px;
+                -webkit-mask-position-x: -100vw, 0px;
             }
         }
 
