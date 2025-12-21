@@ -217,7 +217,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 35vw;
+            font-size: 40vw;
+            /* Unified 40vw */
             line-height: 0.8;
             font-weight: 900;
             letter-spacing: -0.05em;
@@ -229,6 +230,7 @@
             position: relative;
             display: inline-block;
             margin: 0 -1vw;
+            /* Tighter margins for larger digits */
             width: 22vw;
             height: 28vw;
             display: flex;
@@ -267,30 +269,38 @@
         }
 
         .mode-12h #time {
-            font-size: 38.5vw;
+            font-size: 40vw;
+            /* Unified 40vw */
         }
 
         .mode-12h .digit-wrapper {
-            width: 20vw;
-            margin: 0 -0.5vw;
+            width: 22vw;
+            margin: 0 -1vw;
+            /* Standardized to match 24H */
         }
 
         .mode-12h .colon {
-            font-size: 22vw;
-            margin: 0 2vw;
-            padding-bottom: 2.5vw;
+            font-size: 20vw;
+            /* Standardized colon size */
+            margin: 0 -1vw;
+            /* Standardized colon margin */
+            padding-bottom: 2vw;
         }
 
         body.hide-date #date {
             display: none !important;
         }
 
-        body.hide-date #time {
-            font-size: 45vw;
+        /* ... */
+        #clock-container-swap.mode-12h #time-swap {
+            font-size: 40vw;
+            /* Unified 40vw */
         }
 
-        body.hide-date.mode-12h #time {
-            font-size: 48vw;
+        #clock-container-swap.mode-12h .digit-wrapper {
+            width: 22vw;
+            margin: 0 -1vw;
+            /* Standardized */
         }
 
         .blink {
@@ -594,14 +604,14 @@
             }
 
             #time {
-                font-size: 75vw !important;
+                font-size: 80vw !important;
                 line-height: 0.7 !important;
             }
 
             .digit-wrapper {
-                width: 60vw !important;
+                width: 64vw !important;
                 height: 65vw !important;
-                margin: 0 -8vw !important;
+                margin: 0 -9vw !important;
             }
 
             #time .colon,
@@ -619,7 +629,7 @@
                 display: flex;
                 align-items: baseline;
                 justify-content: center;
-                font-size: 75vw;
+                font-size: 80vw;
                 line-height: 0.7;
                 font-weight: 900;
                 letter-spacing: -0.05em;
@@ -627,8 +637,8 @@
 
             #minutes-row .digit-wrapper {
                 position: relative;
-                margin: 0 -8vw;
-                width: 60vw;
+                margin: 0 -9vw;
+                width: 64vw;
                 height: 65vw;
                 display: flex;
                 justify-content: center;
@@ -688,16 +698,16 @@
             }
 
             body.hide-date #time {
-                font-size: 85vw !important;
+                font-size: 90vw !important;
             }
 
             body.hide-date #minutes-row {
-                font-size: 85vw !important;
+                font-size: 90vw !important;
             }
 
             body.hide-date .digit-wrapper,
             body.hide-date #minutes-row .digit-wrapper {
-                width: 70vw !important;
+                width: 72vw !important;
                 height: 75vw !important;
                 margin: 0 -10vw !important;
             }
@@ -719,6 +729,14 @@
             padding-right: max(20px, env(safe-area-inset-right));
             box-sizing: border-box;
             /* Fix for right-shift caused by padding+width */
+
+            /* Hardware Acceleration & Isolation to prevent Flickering */
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            perspective: 1000px;
+            isolation: isolate;
 
             /* Sync Mechanism: Always Display but Hide Opacity */
             display: flex;
@@ -855,7 +873,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 35vw;
+            font-size: 38vw;
             line-height: 0.8;
             font-weight: 900;
             letter-spacing: -0.05em;
@@ -869,21 +887,21 @@
 
         /* 12H Mode Adjustments for Swap */
         #clock-container-swap.mode-12h #time-swap {
-            font-size: 38.5vw;
+            font-size: 42vw;
         }
 
         #clock-container-swap.mode-12h .digit-wrapper {
-            width: 20vw;
+            width: 22vw;
             margin: 0 -0.5vw;
         }
 
         /* Hide Date adjustments (since date is hidden in swap anyway) */
         body.hide-date #clock-container-swap #time-swap {
-            font-size: 45vw;
+            font-size: 48vw;
         }
 
         body.hide-date.mode-12h #clock-container-swap #time-swap {
-            font-size: 48vw;
+            font-size: 50vw;
         }
 
         /* Portrait Mode Sync */
@@ -899,7 +917,7 @@
             }
 
             #clock-container-swap #time-swap {
-                font-size: 75vw !important;
+                font-size: 80vw !important;
                 line-height: 0.7 !important;
             }
 
@@ -907,16 +925,16 @@
                 display: flex;
                 align-items: baseline;
                 justify-content: center;
-                font-size: 75vw;
+                font-size: 80vw;
                 line-height: 0.7;
                 font-weight: 900;
                 letter-spacing: -0.05em;
             }
 
             #clock-container-swap .digit-wrapper {
-                width: 60vw !important;
+                width: 64vw !important;
                 height: 65vw !important;
-                margin: 0 -8vw !important;
+                margin: 0 -9vw !important;
             }
 
             /* Colon and minutes should remain visible in portrait swap to match layout */
@@ -938,16 +956,16 @@
             }
 
             body.hide-date #clock-container-swap #time-swap {
-                font-size: 85vw !important;
+                font-size: 90vw !important;
             }
 
             body.hide-date #minutes-row-swap {
-                font-size: 85vw !important;
+                font-size: 90vw !important;
             }
 
             body.hide-date #clock-container-swap .digit-wrapper,
             body.hide-date #minutes-row-swap .digit-wrapper {
-                width: 70vw !important;
+                width: 72vw !important;
                 height: 75vw !important;
                 margin: 0 -10vw !important;
             }
