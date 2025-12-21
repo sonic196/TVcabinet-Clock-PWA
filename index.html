@@ -728,68 +728,41 @@
             padding-left: max(20px, env(safe-area-inset-left));
             padding-right: max(20px, env(safe-area-inset-right));
             box-sizing: border-box;
-            /* Fix for right-shift caused by padding+width */
 
-            /* Hardware Acceleration & Isolation to prevent Flickering */
+            /* Hardware Acceleration */
             transform: translate3d(0, 0, 0);
             -webkit-transform: translate3d(0, 0, 0);
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
-            perspective: 1000px;
-            isolation: isolate;
 
             /* Sync Mechanism: Always Display but Hide Opacity */
             display: flex;
             opacity: 0;
             pointer-events: none;
 
-            /* Mask Setup - Align with Main Wave */
+            /* SIMPLIFIED FLAT MASK - No Wave Animation */
             --mask-y-px: 100vh;
-            mask-image:
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E"),
-                linear-gradient(to top, black 0%, black 100%);
-            -webkit-mask-image:
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E"),
-                linear-gradient(to top, black 0%, black 100%);
-
-            /* MASK SIZE: 100% width (100vw) matches Main Wave tile width */
-            mask-size: 100% 51px, 100% 200%;
-            -webkit-mask-size: 100% 51px, 100% 200%;
-            mask-repeat: repeat-x, no-repeat;
-            -webkit-mask-repeat: repeat-x, no-repeat;
-            mask-composite: add;
-            -webkit-mask-composite: source-over;
-
-            /* Initial Position (Y is dynamic via variable) */
-            mask-position: 0px calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
-            -webkit-mask-position: 0px calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+            mask-image: linear-gradient(to top, black 0%, black 100%);
+            -webkit-mask-image: linear-gradient(to top, black 0%, black 100%);
+            mask-size: 100% 200%;
+            -webkit-mask-size: 100% 200%;
+            mask-repeat: no-repeat;
+            -webkit-mask-repeat: no-repeat;
+            mask-position: 0px var(--mask-y-px);
+            -webkit-mask-position: 0px var(--mask-y-px);
 
             /* Optimization */
-            will-change: mask-position;
+            will-change: opacity;
 
-            /* Transition for height matching */
+            /* Transition for height matching - NO ANIMATION */
             transition: --mask-y-px 1s linear, opacity 0.3s ease;
-
-            /* Animation: Continuous to sync phase - Animate X ONLY */
-            animation: swap-wave-move-x 5s linear infinite;
         }
 
         body.swap-active.show-liquid #clock-container-swap {
             opacity: 1;
         }
 
-        @keyframes swap-wave-move-x {
-            0% {
-                mask-position-x: 0px, 0px;
-                -webkit-mask-position-x: 0px, 0px;
-            }
-
-            100% {
-                /* Move exactly -100% of Mask Size (100vw) to match Main Wave speed */
-                mask-position-x: -100vw, 0px;
-                -webkit-mask-position-x: -100vw, 0px;
-            }
-        }
+        /* Wave animation REMOVED - using flat mask only */
 
         /* Swapped Colors */
         #clock-container-swap .digit-wrapper:nth-child(1) .digit,
