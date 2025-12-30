@@ -93,19 +93,14 @@
             -webkit-mask-size: 50% 100%;
             mask-repeat: repeat-x;
             -webkit-mask-repeat: repeat-x;
-            animation: wave-move 5s linear infinite;
+            /* JS Controlled Animation for Sync */
+            /* width: 200% so we translate from 0 to -50% (which is -100vw) */
+            transform: translateX(var(--wave-x, 0px));
+            will-change: transform;
             transition: background-color 2s ease;
         }
 
-        @keyframes wave-move {
-            0% {
-                transform: translateX(0);
-            }
-
-            100% {
-                transform: translateX(-50%);
-            }
-        }
+        /* Keyframes removed - moved to JS */
 
         #liquid-container.surface-flat #liquid-surface {
             display: none;
@@ -729,32 +724,47 @@
             padding-right: max(20px, env(safe-area-inset-right));
             box-sizing: border-box;
 
-            /* Hardware Acceleration */
-            transform: translate3d(0, 0, 0);
-            -webkit-transform: translate3d(0, 0, 0);
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
+            /* Hardware Acceleration REMOVED to match Main Clock context */
+            /* transform: translate3d(0, 0, 0); */
 
             /* Sync Mechanism: Always Display but Hide Opacity */
             display: flex;
             opacity: 0;
             pointer-events: none;
 
-            /* SIMPLIFIED FLAT MASK - No Wave Animation */
+            /* SYNCED WAVE MASK */
             --mask-y-px: 100vh;
-            mask-image: linear-gradient(to top, black 0%, black 100%);
-            -webkit-mask-image: linear-gradient(to top, black 0%, black 100%);
-            mask-size: 100% 200%;
-            -webkit-mask-size: 100% 200%;
-            mask-repeat: no-repeat;
-            -webkit-mask-repeat: no-repeat;
-            mask-position: 0px var(--mask-y-px);
-            -webkit-mask-position: 0px var(--mask-y-px);
+            /* --wave-x is set by JS for perfect sync with liquid */
+
+            mask-image:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E"),
+                linear-gradient(to top, black 0%, black 100%);
+            -webkit-mask-image:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E"),
+                linear-gradient(to top, black 0%, black 100%);
+
+            /* Mask Size: 100% width (100vw) matches the tile size of the liquid wave (which is 200% width but 2 tiles) */
+            /* Wait, Liquid is 200% width, mask-size 50% (of 200%) = 100vw. */
+            /* Swap Mask is 100% width. mask-size 100% = 100vw. */
+            /* So sizes match perfectly. */
+            mask-size: 100% 51px, 100% 200%;
+            -webkit-mask-size: 100% 51px, 100% 200%;
+
+            mask-repeat: repeat-x, no-repeat;
+            -webkit-mask-repeat: repeat-x, no-repeat;
+
+            mask-composite: add;
+            -webkit-mask-composite: source-over;
+
+            /* Position: X is driven by --wave-x. Y is driven by --mask-y-px */
+            /* Note: Liquid moves LEFT (negative X). Mask needs to move LEFT (negative X). */
+            mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), var(--wave-x, 0px) var(--mask-y-px);
+            -webkit-mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), var(--wave-x, 0px) var(--mask-y-px);
 
             /* Optimization */
-            will-change: opacity;
+            will-change: mask-position;
 
-            /* Transition for height matching - NO ANIMATION */
+            /* Transition for height matching - NO animation for X (handled by variable) */
             transition: --mask-y-px 1s linear, opacity 0.3s ease;
         }
 
@@ -846,7 +856,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 38vw;
+            font-size: 40vw;
+            /* Unified 40vw */
             line-height: 0.8;
             font-weight: 900;
             letter-spacing: -0.05em;
@@ -860,21 +871,25 @@
 
         /* 12H Mode Adjustments for Swap */
         #clock-container-swap.mode-12h #time-swap {
-            font-size: 42vw;
+            font-size: 40vw;
+            /* Unified 40vw */
         }
 
         #clock-container-swap.mode-12h .digit-wrapper {
             width: 22vw;
-            margin: 0 -0.5vw;
+            margin: 0 -1vw;
+            /* Standardized Margin */
         }
 
         /* Hide Date adjustments (since date is hidden in swap anyway) */
         body.hide-date #clock-container-swap #time-swap {
             font-size: 48vw;
+            /* Updated to 48vw */
         }
 
         body.hide-date.mode-12h #clock-container-swap #time-swap {
-            font-size: 50vw;
+            font-size: 48vw;
+            /* Updated to 48vw */
         }
 
         /* Portrait Mode Sync */
@@ -1245,6 +1260,30 @@
                 }
             }
         }
+        // JS Driven Wave Animation for Perfect Sync
+        function startWaveAnimation() {
+            const duration = 5000; // 5 seconds for one cycle
+            const start = performance.now();
+
+            function animate(now) {
+                // Calculate phase (0 to 1)
+                const elapsed = now - start;
+                const phase = (elapsed % duration) / duration;
+
+                // One full cycle is -100vw (which corresponds to -50% of the 200% width liquid)
+                // We use calculate pixel value based on viewport width
+                const waveX = phase * -100; // -100vw
+
+                // Set CSS Variable
+                // Use 'vw' unit directly if possible to avoid JS resize listeners?
+                // Yes, var(--wave-x) can be string '-50vw'.
+                // Let's try pure string value to avoid recalc.
+                document.documentElement.style.setProperty('--wave-x', `${waveX}vw`);
+
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+        }
 
         const portraitQuery = window.matchMedia('(orientation: portrait)');
         function handleOrientationChange(e) {
@@ -1256,14 +1295,18 @@
             if (!ds && ts) {
                 ds = document.createElement('div');
                 ds.id = 'date-swap-dummy';
-                ds.textContent = '1月1日 週一'; // Matches typical height/width
+                ds.textContent = '1月1日 週一'; // Placeholder text
                 ds.style.visibility = 'hidden';
-                // Copy styles from date to ensure same layout footprint
-                ds.style.fontSize = '8vw';
+
+                // CRITICAL: Match #date CSS exactly to ensure vertical alignment
+                // From CSS: #date { font-size: 6vw; margin: 1vh 0; }
+                ds.style.fontSize = '6vw';
                 ds.style.height = 'auto';
-                ds.style.margin = '2vh 0';
-                ds.style.fontWeight = '700'; // Ensure same weight
-                ds.style.lineHeight = '1.2'; // Ensure same line-height
+                ds.style.margin = '1vh 0';
+                ds.style.fontWeight = '700';
+                ds.style.lineHeight = '1.2';
+                ds.style.padding = '0'; /* Ensure no padding diff */
+
                 document.body.appendChild(ds);
             }
 
