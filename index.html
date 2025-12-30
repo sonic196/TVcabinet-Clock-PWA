@@ -1155,11 +1155,7 @@
 
         // Smart Scale Detection
         function handleSafeAreas() {
-            // Create a temporary element to measure safe area
-            const r = document.querySelector(':root');
-            const rs = getComputedStyle(r);
-            // Browser support for reading env() directly via JS varies.
-            // Reliable way: create hidden div, set padding: env(safe-area-inset-left), read padding.
+            // Priority 1: Check CSS Safe Areas directly via hidden element
             const div = document.createElement('div');
             div.style.paddingLeft = 'env(safe-area-inset-left)';
             div.style.paddingRight = 'env(safe-area-inset-right)';
@@ -1171,10 +1167,28 @@
             const pr = parseFloat(getComputedStyle(div).paddingRight) || 0;
             document.body.removeChild(div);
 
-            // If Left Inset is significant (> 15px), flip scale to Right.
-            // If landscape and HOME button is on Left, then Notch is on Right -> Left is safe.
-            // If landscape and HOME button on Right, Notch is Left -> Flip to Right.
-            if (pl > 20) {
+            let flipped = false;
+
+            // Decision Logic:
+            // 1. If Left Inset > Right Inset, Notch is Left. -> Scale Flipped (Right).
+            // 2. If Right Inset > Left Inset, Notch is Right. -> Scale Normal (Left).
+            // 3. If Insets are equal (or zero), fallback to Orientation Angle.
+            //    - Angle 90: Top Left (Notch Left) -> Scale Flipped.
+            //    - Angle -90: Top Right (Notch Right) -> Scale Normal.
+
+            if (pl > pr && pl > 20) {
+                flipped = true;
+            } else if (pr > pl && pr > 20) {
+                flipped = false;
+            } else {
+                // Fallback to orientation
+                const angle = window.screen?.orientation?.angle || window.orientation || 0;
+                if (angle === 90) {
+                    flipped = true;
+                }
+            }
+
+            if (flipped) {
                 body.classList.add('scale-flipped');
             } else {
                 body.classList.remove('scale-flipped');
