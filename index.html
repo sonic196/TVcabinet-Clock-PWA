@@ -757,9 +757,11 @@
             -webkit-mask-composite: source-over;
 
             /* Position: X is driven by --wave-x. Y is driven by --mask-y-px */
+            /* Position: X is driven by --wave-x. Y is driven by --mask-y-px */
             /* Note: Liquid moves LEFT (negative X). Mask needs to move LEFT (negative X). */
-            mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), var(--wave-x, 0px) var(--mask-y-px);
-            -webkit-mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), var(--wave-x, 0px) var(--mask-y-px);
+            /* Crucial Fix: The second layer (gradient) MUST NOT move horizontally! */
+            mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+            -webkit-mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
 
             /* Optimization */
             will-change: mask-position;
@@ -1590,6 +1592,7 @@
         }
 
         initClock(); setInterval(updateClock, 1000); updateClock();
+        startWaveAnimation(); // Start the sync loop
         // Burn-in jitter disabled for swap alignment
         // setInterval(() => {
         //     const x = Math.floor(Math.random() * MAX_JITTER * 2) - MAX_JITTER, y = Math.floor(Math.random() * MAX_JITTER * 2) - MAX_JITTER;
