@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>TVcabinet Clock (v12 Test 3)</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap');
+
+        :root {
+            --bg-color: #000000;
+            --color-a: #52a9ff;
+            --color-b: #52a9ff;
+            --color-c: color-mix(in srgb, white 80%, var(--color-a));
+            --text-color-night: #ff0000;
+            --liquid-opacity: 0.3;
+            --scale-color: #ffffff;
+            --scale-width: 1.5;
+        }
+
+        @property --scale-width {
+            syntax: '<number>';
+            initial-value: 1;
+            inherits: true;
+        }
+
+        @property --mask-y-px {
+            syntax: '<length>';
+            initial-value: 100vh;
+            inherits: false;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #liquid-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            z-index: 1;
+            pointer-events: none;
+            transition: height 1s linear;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        body.show-liquid #liquid-container {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #liquid-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-a);
+            opacity: var(--liquid-opacity);
+            transition: background-color 2s ease;
+        }
+
+        #liquid-surface {
+            position: absolute;
+            top: -51px;
+            left: 0;
+            width: 200%;
+            height: 51px;
+            background-color: var(--color-a);
+            opacity: var(--liquid-opacity);
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E");
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E");
+            mask-size: 50% 100%;
+            -webkit-mask-size: 50% 100%;
+            mask-repeat: repeat-x;
+            -webkit-mask-repeat: repeat-x;
+            /* JS Controlled Animation for Sync */
+            /* width: 200% so we translate from 0 to -50% (which is -100vw) */
+            transform: translateX(var(--wave-x, 0px));
+            will-change: transform;
+            transition: background-color 2s ease;
+        }
+
+        /* Keyframes removed - moved to JS */
+
+        #liquid-container.surface-flat #liquid-surface {
+            display: none;
+        }
+
+        body.line-mode #liquid-surface,
+        body.line-mode #liquid-fill {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        body.line-mode.show-water-fill #liquid-fill {
+            display: block !important;
+            visibility: visible !important;
+            opacity: var(--liquid-opacity) !important;
+        }
+
+        #liquid-scale {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 60px;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+            display: none;
+        }
+
+        body.show-liquid.line-mode #liquid-scale {
+            display: block;
+        }
+
+        .scale-mark {
+            position: absolute;
+            left: 0;
+            width: calc(8px * var(--scale-width));
+            height: calc(1.5px * var(--scale-width));
+            background-color: var(--scale-color);
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+
+        .scale-mark.medium {
+            width: calc(12px * var(--scale-width));
+            height: calc(2px * var(--scale-width));
+            opacity: 0.8;
+        }
+
+        .scale-mark.major {
+            width: calc(16px * var(--scale-width));
+            height: calc(2.5px * var(--scale-width));
+            opacity: 0.9;
+        }
+
+        .scale-mark.current {
+            width: calc(28px * var(--scale-width)) !important;
+            height: calc(3.5px * var(--scale-width)) !important;
+            opacity: 1 !important;
+            box-shadow: 0 0 8px var(--scale-color);
+        }
+
+        #liquid-second-label {
+            position: fixed;
+            left: 25px;
+            bottom: 10px;
+            font-size: 18px;
+            color: var(--color-a);
+            font-weight: 700;
+            z-index: 6;
+            transition: bottom 0.3s ease, top 0.3s ease, color 2s ease;
+            display: none;
+        }
+
+        body.show-liquid.line-mode #liquid-second-label {
+            display: block;
+        }
+
+        #liquid-container.step-anim {
+            transition: height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        body.liquid-interact #clock-container,
+        body.liquid-interact #date,
+        body.liquid-interact #ampm-standalone {
+            mix-blend-mode: difference;
+        }
+
+        #clock-container {
+            text-align: center;
+            transition: transform 60s linear;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+        }
+
+        #time-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            position: relative;
+        }
+
+        #time {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40vw;
+            /* Unified 40vw */
+            line-height: 0.8;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            position: relative;
+            transition: font-size 0.5s ease;
+        }
+
+        .digit-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 0 -1vw;
+            /* Tighter margins for larger digits */
+            width: 22vw;
+            height: 28vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: width 0.5s ease, margin 0.5s ease;
+        }
+
+        .digit {
+            position: absolute;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 3s ease, color 2s ease;
+            mix-blend-mode: screen;
+            opacity: 0.9;
+            will-change: transform, opacity, color;
+        }
+
+        .digit-wrapper:nth-child(1) .digit,
+        .digit-wrapper:nth-child(4) .digit {
+            color: var(--color-a);
+        }
+
+        .digit-wrapper:nth-child(2) .digit,
+        .digit-wrapper:nth-child(5) .digit {
+            color: var(--color-b);
+        }
+
+        .colon {
+            font-size: 20vw;
+            margin: 0 -1vw;
+            padding-bottom: 2vw;
+            color: var(--color-c);
+            mix-blend-mode: screen;
+            position: relative;
+            z-index: 2;
+            transition: color 2s ease, font-size 0.5s ease;
+        }
+
+        .mode-12h #time {
+            font-size: 40vw;
+            /* Unified 40vw */
+        }
+
+        .mode-12h .digit-wrapper {
+            width: 22vw;
+            margin: 0 -1vw;
+            /* Standardized to match 24H */
+        }
+
+        .mode-12h .colon {
+            font-size: 20vw;
+            /* Standardized colon size */
+            margin: 0 -1vw;
+            /* Standardized colon margin */
+            padding-bottom: 2vw;
+        }
+
+        body.hide-date #date {
+            display: none !important;
+        }
+
+        /* ... */
+        #clock-container-swap.mode-12h #time-swap {
+            font-size: 40vw;
+            /* Unified 40vw */
+        }
+
+        #clock-container-swap.mode-12h .digit-wrapper {
+            width: 22vw;
+            margin: 0 -1vw;
+            /* Standardized */
+        }
+
+        .blink {
+            animation: blinker 2s linear infinite;
+        }
+
+        @keyframes blinker {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.1;
+            }
+        }
+
+        #date {
+            position: fixed;
+            font-size: 4vw;
+            color: var(--color-a);
+            opacity: 0.8;
+            font-weight: 700;
+            letter-spacing: 2px;
+            z-index: 25;
+            transition: color 2s ease;
+        }
+
+        #ampm-standalone {
+            position: fixed;
+            font-size: 5vw;
+            font-weight: 800;
+            color: var(--color-c);
+            opacity: 0;
+            display: none;
+            z-index: 25;
+            transition: opacity 0.5s ease, color 2s ease;
+        }
+
+        #ampm-standalone.visible {
+            opacity: 1;
+            display: block;
+        }
+
+        @media (orientation: landscape) {
+            #date {
+                bottom: max(20px, env(safe-area-inset-bottom));
+                right: max(20px, env(safe-area-inset-right));
+            }
+
+            #ampm-standalone {
+                bottom: max(55px, calc(env(safe-area-inset-bottom) + 35px));
+                right: max(20px, env(safe-area-inset-right));
+            }
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 30;
+        }
+
+        body:active #controls,
+        body.show-controls #controls {
+            opacity: 1;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        .btn-text {
+            margin-left: 5px;
+        }
+
+        #palette-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            z-index: 40;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 300px;
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+            transform: translateY(20px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #palette-panel.visible {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .palette-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .palette-item:active {
+            transform: scale(0.98);
+        }
+
+        .palette-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .palette-item.disabled {
+            opacity: 0.3;
+            filter: grayscale(1);
+        }
+
+        .palette-item.disabled .palette-name {
+            text-decoration: line-through;
+        }
+
+        .palette-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .palette-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        @media (orientation: portrait) {
+            #palette-panel {
+                bottom: 80px;
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%) translateY(20px);
+                width: 85vw;
+                max-width: 350px;
+            }
+
+            #palette-panel.visible {
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        #liquid-settings-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 250px;
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+            transform: translateY(20px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #liquid-settings-panel.visible {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .panel-section.disabled {
+            opacity: 0.4;
+        }
+
+        .panel-section.disabled .panel-options {
+            pointer-events: none;
+        }
+
+        .panel-section.disabled .panel-title {
+            color: #666;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .panel-options {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 2px;
+        }
+
+        .panel-option {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .panel-option.active {
+            background: rgba(255, 255, 255, 0.2);
+            font-weight: bold;
+        }
+
+        body.night-mode {
+            --color-a: var(--text-color-night) !important;
+            --color-b: var(--text-color-night) !important;
+            --color-c: var(--text-color-night) !important;
+        }
+
+        body.night-mode .digit,
+        body.night-mode .colon {
+            mix-blend-mode: normal;
+            opacity: 0.5;
+        }
+
+        body.night-mode #date {
+            color: var(--text-color-night);
+            opacity: 0.4;
+        }
+
+        body.night-mode #liquid-fill,
+        body.night-mode #liquid-surface {
+            background-color: var(--text-color-night);
+            opacity: 0.1 !important;
+        }
+
+        #night-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            z-index: 20;
+        }
+
+        #minutes-row {
+            display: none;
+        }
+
+        @media (orientation: portrait) {
+            #clock-container {
+                justify-content: center;
+                flex-direction: column;
+                gap: 2vh;
+            }
+
+            #time-row {
+                flex-direction: column;
+                align-items: center;
+                gap: 0;
+            }
+
+            #time {
+                font-size: 80vw !important;
+                line-height: 0.7 !important;
+            }
+
+            .digit-wrapper {
+                width: 64vw !important;
+                height: 65vw !important;
+                margin: 0 -9vw !important;
+            }
+
+            #time .colon,
+            #time .digit-wrapper:nth-child(4),
+            #time .digit-wrapper:nth-child(5) {
+                display: none !important;
+            }
+
+            #time .digit-wrapper:nth-child(1) .digit,
+            #time .digit-wrapper:nth-child(2) .digit {
+                color: var(--color-a);
+            }
+
+            #minutes-row {
+                display: flex;
+                align-items: baseline;
+                justify-content: center;
+                font-size: 80vw;
+                line-height: 0.7;
+                font-weight: 900;
+                letter-spacing: -0.05em;
+            }
+
+            #minutes-row .digit-wrapper {
+                position: relative;
+                margin: 0 -9vw;
+                width: 64vw;
+                height: 65vw;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            #minutes-row .digit {
+                position: absolute;
+                transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 3s ease, color 2s ease;
+                mix-blend-mode: screen;
+                opacity: 0.9;
+                color: var(--color-b);
+            }
+
+            #date {
+                position: static;
+                font-size: 6vw;
+                margin: 1vh 0;
+            }
+
+            #date.blink {
+                animation: blinker 2s linear infinite;
+            }
+
+            #controls {
+                bottom: max(10px, env(safe-area-inset-bottom));
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%);
+                flex-direction: row;
+                flex-wrap: nowrap;
+                justify-content: center;
+                gap: 8px;
+                max-width: 95vw;
+            }
+
+            #liquid-settings-panel {
+                bottom: 80px;
+                left: 50%;
+                right: auto;
+                max-height: calc(100vh - 160px);
+                transform: translateX(-50%) translateY(20px);
+            }
+
+            #liquid-settings-panel.visible {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            .btn {
+                min-width: 45px;
+                padding: 10px;
+                font-size: 16px;
+            }
+
+            .btn-text {
+                display: none;
+            }
+
+            body.hide-date #time {
+                font-size: 90vw !important;
+            }
+
+            body.hide-date #minutes-row {
+                font-size: 90vw !important;
+            }
+
+            body.hide-date .digit-wrapper,
+            body.hide-date #minutes-row .digit-wrapper {
+                width: 72vw !important;
+                height: 75vw !important;
+                margin: 0 -10vw !important;
+            }
+        }
+
+        /* Swap Clock Container - Base Styles */
+        #clock-container-swap {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 11;
+            /* Above main clock (10), below controls */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            box-sizing: border-box;
+
+            /* Hardware Acceleration REMOVED to match Main Clock context */
+            /* transform: translate3d(0, 0, 0); */
+
+            /* Sync Mechanism: Always Display but Hide Opacity */
+            display: flex;
+            opacity: 0;
+            pointer-events: none;
+
+            /* SYNCED WAVE MASK */
+            --mask-y-px: 100vh;
+            /* --wave-x is set by JS for perfect sync with liquid */
+
+            mask-image:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E"),
+                linear-gradient(to top, black 0%, black 100%);
+            -webkit-mask-image:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E"),
+                linear-gradient(to top, black 0%, black 100%);
+
+            /* Mask Size: 100% width (100vw) matches the tile size of the liquid wave (which is 200% width but 2 tiles) */
+            /* Wait, Liquid is 200% width, mask-size 50% (of 200%) = 100vw. */
+            /* Swap Mask is 100% width. mask-size 100% = 100vw. */
+            /* So sizes match perfectly. */
+            mask-size: 100% 51px, 100% 200%;
+            -webkit-mask-size: 100% 51px, 100% 200%;
+
+            mask-repeat: repeat-x, no-repeat;
+            -webkit-mask-repeat: repeat-x, no-repeat;
+
+            mask-composite: add;
+            -webkit-mask-composite: source-over;
+
+            /* Position: X is driven by --wave-x. Y is driven by --mask-y-px */
+            /* Position: X is driven by --wave-x. Y is driven by --mask-y-px */
+            /* Note: Liquid moves LEFT (negative X). Mask needs to move LEFT (negative X). */
+            /* Crucial Fix: The second layer (gradient) MUST NOT move horizontally! */
+            mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+            -webkit-mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+
+            /* Optimization */
+            will-change: mask-position;
+
+            /* Transition for height matching - NO animation for X (handled by variable) */
+            transition: --mask-y-px 1s linear, opacity 0.3s ease;
+        }
+
+        body.swap-active.show-liquid #clock-container-swap {
+            opacity: 1;
+        }
+
+        /* Wave animation REMOVED - using flat mask only */
+
+        /* Swapped Colors */
+        #clock-container-swap .digit-wrapper:nth-child(1) .digit,
+        #clock-container-swap .digit-wrapper:nth-child(4) .digit {
+            color: var(--color-b);
+            mix-blend-mode: normal;
+            /* Ensure it covers the digit below */
+        }
+
+        #clock-container-swap .digit-wrapper:nth-child(2) .digit,
+        #clock-container-swap .digit-wrapper:nth-child(5) .digit {
+            color: var(--color-a);
+            mix-blend-mode: normal;
+            /* Ensure it covers the digit below */
+        }
+
+        #clock-container-swap .colon {
+            opacity: 1;
+            /* Visible to ensuring alignment, color stays white */
+            color: var(--scale-color);
+        }
+
+        /* Ensure layout matches main clock exactly */
+        #clock-container-swap #time-row-swap {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Pointer Events for Panels - Prevent clicking when hidden */
+        #palette-panel,
+        #liquid-settings-panel {
+            pointer-events: none;
+        }
+
+        #palette-panel.visible,
+        #liquid-settings-panel.visible {
+            pointer-events: auto;
+        }
+
+        /* Swap Wave Overrides for Flat/Line Modes */
+        /* When surface is Flat or Line, the Swap Mask should also be flat (no wave) */
+        body.swap-active.show-liquid .surface-flat~#clock-container-swap,
+        body.swap-active.line-mode #clock-container-swap {
+            mask-image: linear-gradient(to top, black 0%, black 100%);
+            -webkit-mask-image: linear-gradient(to top, black 0%, black 100%);
+            mask-size: 100% 200%;
+            -webkit-mask-size: 100% 200%;
+            mask-position: 0px var(--mask-y-px);
+            -webkit-mask-position: 0px var(--mask-y-px);
+            animation: none;
+        }
+
+        /* Specifically target surface-flat on liquid container triggering the body state logic or use direct sibling/parent checks? 
+           Actually, JS toggles classes on liquidContainer. 
+           But for line-mode, class is on BODY.
+           For flat mode, class is on liquidContainer? 
+           JS: liquidContainer.classList.add('surface-' + surface); 
+           Wait, there is no body class for flat. 
+           I need to check how to target 'flat' mode. 
+           liquidContainer has class 'surface-flat'. 
+           liquidContainer is sibling of clock-container-swap? No.
+           Structure:
+           body
+             liquid-container
+             clock-container-swap
+           So general sibling selector: #liquid-container.surface-flat ~ #clock-container-swap works!
+        */
+        body.swap-active #liquid-container.surface-flat~#clock-container-swap {
+            mask-image: linear-gradient(to top, black 0%, black 100%);
+            -webkit-mask-image: linear-gradient(to top, black 0%, black 100%);
+            mask-size: 100% 200%;
+            -webkit-mask-size: 100% 200%;
+            mask-position: 0px var(--mask-y-px);
+            -webkit-mask-position: 0px var(--mask-y-px);
+            animation: none;
+        }
+
+        #clock-container-swap #time-swap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40vw;
+            /* Unified 40vw */
+            line-height: 0.8;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            position: relative;
+            transition: font-size 0.5s ease;
+        }
+
+        #clock-container-swap #minutes-row-swap {
+            display: none;
+        }
+
+        /* 12H Mode Adjustments for Swap */
+        #clock-container-swap.mode-12h #time-swap {
+            font-size: 40vw;
+            /* Unified 40vw */
+        }
+
+        #clock-container-swap.mode-12h .digit-wrapper {
+            width: 22vw;
+            margin: 0 -1vw;
+            /* Standardized Margin */
+        }
+
+        /* Hide Date adjustments (since date is hidden in swap anyway) */
+        body.hide-date #clock-container-swap #time-swap {
+            font-size: 48vw;
+            /* Updated to 48vw */
+        }
+
+        body.hide-date.mode-12h #clock-container-swap #time-swap {
+            font-size: 48vw;
+            /* Updated to 48vw */
+        }
+
+        /* Portrait Mode Sync */
+        @media (orientation: portrait) {
+            #clock-container-swap {
+                gap: 2vh;
+            }
+
+            #clock-container-swap #time-row-swap {
+                flex-direction: column;
+                align-items: center;
+                gap: 0;
+            }
+
+            #clock-container-swap #time-swap {
+                font-size: 80vw !important;
+                line-height: 0.7 !important;
+            }
+
+            #clock-container-swap #minutes-row-swap {
+                display: flex;
+                align-items: baseline;
+                justify-content: center;
+                font-size: 80vw;
+                line-height: 0.7;
+                font-weight: 900;
+                letter-spacing: -0.05em;
+            }
+
+            #clock-container-swap .digit-wrapper {
+                width: 64vw !important;
+                height: 65vw !important;
+                margin: 0 -9vw !important;
+            }
+
+            /* Colon and minutes should remain visible in portrait swap to match layout */
+            #clock-container-swap #time-swap .colon,
+            #clock-container-swap #time-swap .digit-wrapper:nth-child(4),
+            #clock-container-swap #time-swap .digit-wrapper:nth-child(5) {
+                display: block !important;
+                /* Or inline-block/flex depending on usage, but block allows flex scaling. Actually just removing display:none defaults to flex item */
+                display: initial !important;
+                opacity: 1;
+                /* Ensure visible */
+            }
+
+            /* Colors for minutes-row in Swap Mode (Portrait) */
+            /* Normal: minutes are Color B */
+            /* Swap: minutes should be Color A */
+            #minutes-row-swap .digit {
+                color: var(--color-a);
+            }
+
+            body.hide-date #clock-container-swap #time-swap {
+                font-size: 90vw !important;
+            }
+
+            body.hide-date #minutes-row-swap {
+                font-size: 90vw !important;
+            }
+
+            body.hide-date #clock-container-swap .digit-wrapper,
+            body.hide-date #minutes-row-swap .digit-wrapper {
+                width: 72vw !important;
+                height: 75vw !important;
+                margin: 0 -10vw !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="show-liquid">
+    <div id="liquid-container">
+        <div id="liquid-surface"></div>
+        <div id="liquid-fill"></div>
+    </div>
+    <div id="liquid-scale"></div>
+    <div id="liquid-second-label">0s</div>
+    <div id="clock-container">
+        <div id="time-row">
+            <div id="time"></div>
+            <div id="minutes-row"></div>
+        </div>
+    </div>
+
+    <!-- Swap Clock (Below Water, revealed by mask) -->
+    <div id="clock-container-swap">
+        <div id="time-row-swap">
+            <div id="time-swap"></div>
+            <div id="minutes-row-swap"></div>
+        </div>
+    </div>
+    <div id="date">1月1日 週一</div>
+    <div id="ampm-standalone"></div>
+    <div id="night-overlay"></div>
+    <div id="palette-panel">
+        <!-- Generated by JS -->
+    </div>
+    <div id="liquid-settings-panel">
+        <div class="panel-section">
+            <div class="panel-title">總開關</div>
+            <div class="panel-options">
+                <div class="panel-option active" data-setting="master" data-value="on">開啟</div>
+                <div class="panel-option" data-setting="master" data-value="off">關閉</div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-title">液面樣式</div>
+            <div class="panel-options">
+                <div class="panel-option active" data-setting="surface" data-value="wave">波浪</div>
+                <div class="panel-option" data-setting="surface" data-value="flat">靜面</div>
+                <div class="panel-option" data-setting="surface" data-value="line">刻度</div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-title">顏色濃度</div>
+            <div class="panel-options">
+                <div class="panel-option" data-setting="opacity" data-value="0.15">淡</div>
+                <div class="panel-option active" data-setting="opacity" data-value="0.3">標準</div>
+                <div class="panel-option" data-setting="opacity" data-value="0.5">濃</div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-title">上升效果</div>
+            <div class="panel-options">
+                <div class="panel-option active" data-setting="rise" data-value="smooth">平滑</div>
+                <div class="panel-option" data-setting="rise" data-value="step">秒跳</div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-title">顏色交互</div>
+            <div class="panel-options">
+                <div class="panel-option" data-setting="interact" data-value="on">反差</div>
+                <div class="panel-option" data-setting="interact" data-value="swap">交換</div>
+                <div class="panel-option active" data-setting="interact" data-value="off">關閉</div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-title">重置模式</div>
+            <div class="panel-options">
+                <div class="panel-option active" data-setting="reset" data-value="instant">瞬間</div>
+                <div class="panel-option" data-setting="reset" data-value="drain">排水</div>
+            </div>
+        </div>
+        <div class="panel-section disabled" id="section-scalewidth">
+            <div class="panel-title">刻度粗細</div>
+            <div class="panel-options">
+                <div class="panel-option" data-setting="scalewidth" data-value="1">細</div>
+                <div class="panel-option active" data-setting="scalewidth" data-value="1.5">中</div>
+                <div class="panel-option" data-setting="scalewidth" data-value="2">粗</div>
+            </div>
+        </div>
+        <div class="panel-section disabled" id="section-waterfill">
+            <div class="panel-title">水量填充</div>
+            <div class="panel-options">
+                <div class="panel-option" data-setting="waterfill" data-value="off">關閉</div>
+                <div class="panel-option active" data-setting="waterfill" data-value="on">開啟</div>
+            </div>
+        </div>
+    </div>
+    <div id="controls">
+        <button class="btn" id="toggle-palette">🎨<span class="btn-text"> 換色</span></button>
+        <button class="btn" id="toggle-format">🕒<span class="btn-text"> 24H</span></button>
+        <button class="btn" id="toggle-date">📅<span class="btn-text"> 日期: 開</span></button>
+        <button class="btn" id="toggle-liquid">🌊<span class="btn-text"> 水位設定</span></button>
+        <button class="btn" id="toggle-blink">✨<span class="btn-text"> 閃爍: 開</span></button>
+        <button class="btn" id="toggle-night">🌙<span class="btn-text"> 夜間模式</span></button>
+        <button class="btn" id="btn-random">🎲<span class="btn-text"> 隨機</span></button>
+    </div>
+    <script>
+        const BURN_IN_INTERVAL = 60000, MAX_JITTER = 20;
+        const PALETTE_DATA = [
+            { name: "經典藍", colors: ['#4facfe', '#00f2fe'], enabled: true },
+            { name: "日落氛圍", colors: ['#ff0844', '#ffb199'], enabled: true },
+            { name: "極光綠", colors: ['#0ba360', '#3cba92'], enabled: true },
+            { name: "皇家紫", colors: ['#667eea', '#764ba2'], enabled: true },
+            { name: "電光紫", colors: ['#f77062', '#fe5196'], enabled: true },
+            { name: "流金歲月", colors: ['#f6d365', '#fda085'], enabled: true },
+            { name: "午夜霓虹", colors: ['#00c6fb', '#005bea'], enabled: true },
+            { name: "甜蜜晨光", colors: ['#fa709a', '#fee140'], enabled: true },
+            { name: "春意盎然", colors: ['#43e97b', '#38f9d7'], enabled: true },
+            { name: "珊瑚日落", colors: ['#ff6b6b', '#feca57'], enabled: true },
+            { name: "海洋微風", colors: ['#48dbfb', '#0abde3'], enabled: true },
+            { name: "熱帶烈火", colors: ['#ee5a6f', '#f39c12'], enabled: true },
+            { name: "深邃紫", colors: ['#5f27cd', '#341f97'], enabled: true },
+            { name: "清新薄荷", colors: ['#00d2d3', '#1dd1a1'], enabled: true },
+            { name: "糖果夢境", colors: ['#ff9ff3', '#feca57'], enabled: true },
+            { name: "天空藍", colors: ['#54a0ff', '#2e86de'], enabled: true },
+            { name: "火熱紅", colors: ['#ff6348', '#ff4757'], enabled: true },
+            { name: "翡翠綠", colors: ['#1abc9c', '#16a085'], enabled: true },
+            { name: "霓虹紫", colors: ['#e056fd', '#686de0'], enabled: true },
+            { name: "黃金橙", colors: ['#ffd32a', '#ff8c00'], enabled: true }
+        ];
+
+        let isNightMode = false, isBlinking = true, isLiquidVisible = true, is24Hour = true, isDateVisible = true, currentPaletteIndex = 0, lastHours = '';
+        let liquidSettings = { opacity: 0.3, rise: 'smooth', surface: 'wave', interact: false, reset: 'instant', scaleWidth: 1.5, waterFill: true };
+
+        const body = document.body, nightOverlay = document.getElementById('night-overlay');
+        const btnNight = document.getElementById('toggle-night'), btnBlink = document.getElementById('toggle-blink');
+        const btnFormat = document.getElementById('toggle-format'), btnPalette = document.getElementById('toggle-palette');
+        const btnDate = document.getElementById('toggle-date'), btnLiquid = document.getElementById('toggle-liquid');
+        const btnRandom = document.getElementById('btn-random');
+
+        const liquidPanel = document.getElementById('liquid-settings-panel');
+        const palettePanel = document.getElementById('palette-panel');
+
+        const timeContainer = document.getElementById('time'), minutesContainer = document.getElementById('minutes-row');
+        const clockContainer = document.getElementById('clock-container'), dateElement = document.getElementById('date');
+        const liquidContainer = document.getElementById('liquid-container'), liquidScale = document.getElementById('liquid-scale');
+        const liquidSecondLabel = document.getElementById('liquid-second-label');
+
+        function generateScaleMarks() { liquidScale.innerHTML = ''; for (let i = 0; i <= 60; i++) { const mark = document.createElement('div'); if (i % 10 === 0) mark.className = 'scale-mark major'; else if (i % 5 === 0) mark.className = 'scale-mark medium'; else mark.className = 'scale-mark'; mark.dataset.second = i; mark.style.bottom = `${(i / 60) * 100}%`; liquidScale.appendChild(mark); } }
+        function updateControlStates() {
+            const s = document.getElementById('section-scalewidth'), w = document.getElementById('section-waterfill');
+            if (liquidSettings.surface === 'line') {
+                s.classList.remove('disabled');
+                w.classList.remove('disabled');
+                if (liquidSettings.waterFill && liquidSettings.rise !== 'step') {
+                    applyRiseMode('step');
+                }
+            } else {
+                s.classList.add('disabled');
+                w.classList.add('disabled');
+            }
+            updatePanelUI();
+        }
+
+        function updatePanelUI() {
+            document.querySelectorAll('#liquid-settings-panel .panel-option').forEach(opt => {
+                const st = opt.dataset.setting, val = opt.dataset.value;
+                let isActive = false;
+                if (st === 'master') isActive = (val === (isLiquidVisible ? 'on' : 'off'));
+                else if (st === 'interact') {
+                    // Normalizing: if boolean true -> check 'on', false -> check 'off'
+                    // if string 'swap' -> check 'swap'
+                    // if string 'on'/'off' -> check exact
+                    const current = liquidSettings.interact;
+                    if (val === 'swap') isActive = (current === 'swap');
+                    else if (val === 'on') isActive = (current === true || current === 'on');
+                    else if (val === 'off') isActive = (current === false || current === 'off');
+                }
+                else if (st === 'waterfill') isActive = (val === (liquidSettings.waterFill ? 'on' : 'off'));
+                else if (st === 'scalewidth') isActive = (parseFloat(val) === liquidSettings.scaleWidth);
+                else if (st === 'opacity') isActive = (parseFloat(val) === liquidSettings.opacity);
+                else isActive = (val === liquidSettings[st]);
+
+                opt.classList.toggle('active', isActive);
+            });
+        }
+
+        function applyRiseMode(mode) {
+            liquidSettings.rise = mode;
+            const currentHeight = liquidContainer.style.height || '0%';
+            liquidContainer.style.transition = 'none';
+            liquidContainer.style.height = currentHeight;
+            liquidContainer.offsetHeight;
+            if (mode === 'step') {
+                liquidContainer.classList.add('step-anim');
+                liquidContainer.style.transition = '';
+            } else {
+                liquidContainer.classList.remove('step-anim');
+                liquidContainer.style.transition = 'height 1s linear';
+            }
+        }
+
+        function initClock() {
+            // Main clock
+            for (let i = 0; i < 5; i++) { if (i === 2) { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; timeContainer.appendChild(c); } else { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); timeContainer.appendChild(w); } }
+            for (let i = 0; i < 2; i++) { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); minutesContainer.appendChild(w); }
+
+            // Swap clock (same structure)
+            const timeSwap = document.getElementById('time-swap');
+            const minutesSwap = document.getElementById('minutes-row-swap');
+            if (timeSwap) {
+                for (let i = 0; i < 5; i++) { if (i === 2) { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; timeSwap.appendChild(c); } else { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); timeSwap.appendChild(w); } }
+            }
+            if (minutesSwap) {
+                for (let i = 0; i < 2; i++) { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); minutesSwap.appendChild(w); }
+            }
+
+            renderPalettePanel();
+            updatePalette(currentPaletteIndex, false); // False = don't increment, just set initial
+            handleOrientationChange(portraitQuery);
+            updateBlinkingState();
+            generateScaleMarks();
+            updateControlStates();
+        }
+
+        function renderPalettePanel() {
+            palettePanel.innerHTML = '';
+            PALETTE_DATA.forEach((p, index) => {
+                const item = document.createElement('div');
+                item.className = 'palette-item';
+                if (index === currentPaletteIndex) item.classList.add('active');
+                if (!p.enabled) item.classList.add('disabled');
+
+                const preview = document.createElement('div');
+                preview.className = 'palette-preview';
+                preview.style.background = `linear-gradient(135deg, ${p.colors[0]}, ${p.colors[1]})`;
+
+                const name = document.createElement('div');
+                name.className = 'palette-name';
+                name.textContent = p.name;
+
+                item.appendChild(preview);
+                item.appendChild(name);
+
+                // Click to Select
+                item.addEventListener('click', (e) => {
+                    if (item.dataset.longPressed === 'true') {
+                        item.dataset.longPressed = 'false';
+                        return;
+                    }
+                    if (p.enabled || index === currentPaletteIndex) {
+                        updatePalette(index, false);
+                    }
+                });
+
+                // Long Press to Toggle
+                let pressTimer;
+                const startPress = (e) => {
+                    item.dataset.longPressed = 'false';
+                    pressTimer = setTimeout(() => {
+                        item.dataset.longPressed = 'true';
+                        togglePaletteEnabled(index);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    }, 600);
+                };
+
+                const cancelPress = (e) => {
+                    clearTimeout(pressTimer);
+                };
+
+                item.addEventListener('mousedown', startPress);
+                item.addEventListener('touchstart', startPress);
+                item.addEventListener('mouseup', cancelPress);
+                item.addEventListener('mouseleave', cancelPress);
+                item.addEventListener('touchend', cancelPress);
+                item.addEventListener('contextmenu', e => e.preventDefault());
+
+                palettePanel.appendChild(item);
+            });
+        }
+
+        function togglePaletteEnabled(index) {
+            PALETTE_DATA[index].enabled = !PALETTE_DATA[index].enabled;
+            // Update UI
+            const item = palettePanel.children[index];
+            if (item) {
+                item.classList.toggle('disabled', !PALETTE_DATA[index].enabled);
+            }
+        }
+
+        function updateBlinkingState() {
+            const b = btnBlink.querySelector('.btn-text');
+            if (b) b.textContent = isBlinking ? ' 閃爍: 開' : ' 閃爍: 關';
+            const colons = document.querySelectorAll('.colon');
+            const d = document.getElementById('date'), p = portraitQuery.matches;
+
+            colons.forEach(c => c.classList.remove('blink'));
+            if (d) d.classList.remove('blink');
+
+            if (isBlinking) {
+                if (p && d) {
+                    d.classList.add('blink');
+                } else {
+                    colons.forEach(c => c.classList.add('blink'));
+                }
+            }
+        }
+        // JS Driven Wave Animation for Perfect Sync
+        function startWaveAnimation() {
+            const duration = 5000; // 5 seconds for one cycle
+            const start = performance.now();
+
+            function animate(now) {
+                // Calculate phase (0 to 1)
+                const elapsed = now - start;
+                const phase = (elapsed % duration) / duration;
+
+                // One full cycle is -100vw (which corresponds to -50% of the 200% width liquid)
+                // We use calculate pixel value based on viewport width
+                const waveX = phase * -100; // -100vw
+
+                // Set CSS Variable
+                // Use 'vw' unit directly if possible to avoid JS resize listeners?
+                // Yes, var(--wave-x) can be string '-50vw'.
+                // Let's try pure string value to avoid recalc.
+                document.documentElement.style.setProperty('--wave-x', `${waveX}vw`);
+
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+        }
+
+        const portraitQuery = window.matchMedia('(orientation: portrait)');
+        function handleOrientationChange(e) {
+            const t = document.getElementById('time-row');
+            const ts = document.getElementById('time-row-swap');
+            let ds = document.getElementById('date-swap-dummy');
+
+            // Create dummy if doesn't exist
+            if (!ds && ts) {
+                ds = document.createElement('div');
+                ds.id = 'date-swap-dummy';
+                ds.textContent = '1月1日 週一'; // Placeholder text
+                ds.style.visibility = 'hidden';
+
+                // CRITICAL: Match #date CSS exactly to ensure vertical alignment
+                // From CSS: #date { font-size: 6vw; margin: 1vh 0; }
+                ds.style.fontSize = '6vw';
+                ds.style.height = 'auto';
+                ds.style.margin = '1vh 0';
+                ds.style.fontWeight = '700';
+                ds.style.lineHeight = '1.2';
+                ds.style.padding = '0'; /* Ensure no padding diff */
+
+                document.body.appendChild(ds);
+            }
+
+            if (e.matches) {
+                // Portrait: Insert date between time and minutes
+                t.insertBefore(dateElement, minutesContainer);
+                t.style.flexDirection = 'column';
+                t.style.alignItems = 'center';
+
+                if (ts && ds) {
+                    const minsSwap = document.getElementById('minutes-row-swap');
+                    ts.insertBefore(ds, minsSwap);
+                    ts.style.flexDirection = 'column';
+                    ts.style.alignItems = 'center';
+
+                    // Sync dummy style with real date
+                    const dStyle = window.getComputedStyle(dateElement);
+                    ds.style.display = 'block'; // Ensure it takes space
+                    // We rely on CSS classes for main styling, but might need to force some dimensions if dynamic
+                }
+            } else {
+                // Landscape: Move date to body
+                document.body.appendChild(dateElement);
+                t.style.flexDirection = '';
+                t.style.alignItems = '';
+
+                if (ts && ds) {
+                    document.body.appendChild(ds);
+                    ds.style.display = 'none'; // Hide in landscape
+                    ts.style.flexDirection = '';
+                    ts.style.alignItems = '';
+                }
+            }
+            updateBlinkingState();
+            updateClock();
+        }
+        portraitQuery.addEventListener('change', handleOrientationChange);
+
+        function updateClock() {
+            const now = new Date(); let h = now.getHours(); const m = now.getMinutes(), s = now.getSeconds();
+
+            // Automatic Palette Change every hour
+            if (String(now.getHours()).padStart(2, '0') !== lastHours && lastHours !== '') {
+                // Find next enabled palette
+                let nextIndex = (currentPaletteIndex + 1) % PALETTE_DATA.length;
+                let attempts = 0;
+                while (!PALETTE_DATA[nextIndex].enabled && attempts < PALETTE_DATA.length) {
+                    nextIndex = (nextIndex + 1) % PALETTE_DATA.length;
+                    attempts++;
+                }
+                if (attempts < PALETTE_DATA.length) {
+                    updatePalette(nextIndex, false);
+                }
+            }
+            lastHours = String(now.getHours()).padStart(2, '0');
+
+            if (isLiquidVisible) {
+                const pct = (s / 60) * 100;
+                document.querySelectorAll('.scale-mark').forEach(mk => mk.classList.remove('current'));
+                const cm = document.querySelector(`.scale-mark[data-second="${s}"]`);
+                if (cm) cm.classList.add('current');
+
+                if (liquidSettings.rise === 'step') {
+                    liquidContainer.classList.add('step-anim');
+                    if (s === 0) {
+                        if (liquidSettings.reset === 'drain') { liquidContainer.style.transition = 'height 0.8s ease-out'; liquidContainer.style.height = '0%'; }
+                        else { liquidContainer.style.transition = 'none'; liquidContainer.style.height = '0%'; liquidContainer.offsetHeight; liquidContainer.style.transition = ''; }
+                    } else { liquidContainer.style.height = `${pct}%`; }
+                } else {
+                    liquidContainer.classList.remove('step-anim');
+                    liquidContainer.style.transition = 'height 1s linear';
+                    if (s === 0) {
+                        if (liquidSettings.reset === 'drain') { liquidContainer.style.transition = 'height 0.8s ease-out'; liquidContainer.style.height = '0%'; }
+                        else { liquidContainer.style.transition = 'none'; liquidContainer.style.height = '0%'; liquidContainer.offsetHeight; liquidContainer.style.transition = 'height 1s linear'; }
+                    } else { liquidContainer.style.height = `${pct}%`; }
+                }
+
+                const th = (30 / window.innerHeight) * 100;
+                if (pct > (100 - th - 2)) { liquidSecondLabel.style.bottom = 'auto'; liquidSecondLabel.style.top = `${100 - pct + 1}%`; }
+                else { liquidSecondLabel.style.top = 'auto'; liquidSecondLabel.style.bottom = `${pct + 1}%`; }
+                liquidSecondLabel.textContent = s + 's';
+
+                // Update Swap Mask Position
+                const swapContainer = document.getElementById('clock-container-swap');
+                if (swapContainer) {
+                    const maskYPx = window.innerHeight * ((100 - pct) / 100);
+                    swapContainer.style.setProperty('--mask-y-px', `${maskYPx}px`);
+
+                    // Sync transition with liquid container for smoothness
+                    if (s === 0 && liquidSettings.reset !== 'drain') {
+                        swapContainer.style.transition = 'none';
+                        // Force reflow
+                        swapContainer.offsetHeight;
+                        swapContainer.style.transition = '--mask-y-px 1s linear';
+                    } else if (liquidSettings.rise === 'step') {
+                        swapContainer.style.transition = '--mask-y-px 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    } else {
+                        swapContainer.style.transition = '--mask-y-px 1s linear';
+                    }
+                }
+            }
+
+            let ap = ''; const as = document.getElementById('ampm-standalone');
+            const swapClockContainer = document.getElementById('clock-container-swap');
+            if (!is24Hour) {
+                ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+                clockContainer.classList.add('mode-12h');
+                if (swapClockContainer) swapClockContainer.classList.add('mode-12h');
+                if (!isDateVisible) { as.textContent = ap; as.classList.add('visible'); } else { as.classList.remove('visible'); }
+            } else {
+                clockContainer.classList.remove('mode-12h');
+                if (swapClockContainer) swapClockContainer.classList.remove('mode-12h');
+                if (as) as.classList.remove('visible');
+            }
+
+            const hs = !is24Hour ? String(h) : String(h).padStart(2, '0'), ms = String(m).padStart(2, '0'), h1 = hs.length === 2 ? hs[0] : '', h2 = hs.length === 2 ? hs[1] : hs[0];
+
+            const ws = timeContainer.querySelectorAll('.digit-wrapper');
+            updateDigitInWrapper(ws[0], h1, 0, false);
+            updateDigitInWrapper(ws[1], h2, 1, false);
+            updateDigitInWrapper(ws[2], ms[0], 2, false);
+            updateDigitInWrapper(ws[3], ms[1], 3, false);
+            const mw = minutesContainer.querySelectorAll('.digit-wrapper');
+            updateDigitInWrapper(mw[0], ms[0], 0, true);
+            updateDigitInWrapper(mw[1], ms[1], 1, true);
+
+            const wk = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+            document.getElementById('date').textContent = (ap && isDateVisible) ? `${ap}｜${now.getMonth() + 1}月${now.getDate()}日 ${wk[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 ${wk[now.getDay()]}`;
+        }
+
+        function updateDigitInWrapper(w, nc, wrapperIndex, isMinutesRow) {
+            const cd = w.querySelector('.digit:last-child'), cv = cd ? cd.textContent : '';
+            const ip = portraitQuery.matches;
+            if (cv !== nc) {
+                const nd = document.createElement('span');
+                nd.className = 'digit';
+                nd.textContent = nc;
+                nd.style.opacity = '0';
+
+                // Random rotation/offset for stacking effect
+                let r = 0, sx = 0, sy = 0;
+                if (!ip) {
+                    r = Math.random() * 10 - 5;
+                    sx = (Math.random() - 0.5) * 2;
+                    sy = (Math.random() - 0.5) * 2;
+                }
+                const finalTransform = `rotate(${r}deg) scale(1) translate(${sx}vw, ${sy}vw)`;
+                nd.style.transform = `rotate(${r}deg) scale(0.8) translate(${sx}vw, ${sy}vw)`;
+                w.appendChild(nd);
+
+                requestAnimationFrame(() => {
+                    nd.style.opacity = '1';
+                    nd.style.transform = finalTransform;
+                    if (cd) {
+                        cd.style.opacity = '0';
+                        const exitR = ip ? 0 : Math.random() * 10 - 5;
+                        cd.style.transform = ip ? 'scale(1.2)' : `rotate(${exitR}deg) scale(1.2) translate(${sx * 1.5}vw, ${sy * 1.5}vw)`;
+                        setTimeout(() => { if (cd.parentNode === w) w.removeChild(cd); }, 3000);
+                    }
+                });
+
+                // Sync transform to corresponding swap clock digit
+                const swapContainer = isMinutesRow
+                    ? document.getElementById('minutes-row-swap')
+                    : document.getElementById('time-swap');
+                if (swapContainer) {
+                    const swapDigits = swapContainer.querySelectorAll('.digit-wrapper .digit');
+                    const swapDigit = swapDigits[wrapperIndex];
+                    if (swapDigit) {
+                        swapDigit.textContent = nc;
+                        swapDigit.style.transform = finalTransform;
+                    }
+                }
+            }
+        }
+
+        function updatePalette(index, inc = true) {
+            if (isNightMode) return;
+
+            let nextIndex = index;
+            if (inc) {
+                // Not used mostly, but kept for compatibility logic if needed
+                nextIndex = (currentPaletteIndex + 1) % PALETTE_DATA.length;
+            }
+
+            currentPaletteIndex = nextIndex;
+            const p = PALETTE_DATA[currentPaletteIndex];
+            document.documentElement.style.setProperty('--color-a', p.colors[0]);
+            document.documentElement.style.setProperty('--color-b', p.colors[1]);
+
+            // Update Active State
+            if (palettePanel.children.length > 0) {
+                Array.from(palettePanel.children).forEach((child, idx) => {
+                    child.classList.toggle('active', idx === currentPaletteIndex);
+                });
+            }
+
+            // Update Button Text
+            const btnText = btnPalette.querySelector('.btn-text');
+            if (btnText) btnText.textContent = ` ${p.name}`;
+        }
+
+        function randomizeSettings() {
+            // Randomize Palette (Filter Enabled)
+            const enabledIndices = PALETTE_DATA.map((p, i) => p.enabled ? i : -1).filter(i => i !== -1);
+            if (enabledIndices.length > 0) {
+                const rIndex = enabledIndices[Math.floor(Math.random() * enabledIndices.length)];
+                updatePalette(rIndex, false);
+            }
+
+            // Randomize Time Format
+            is24Hour = Math.random() > 0.5;
+            const bF = btnFormat.querySelector('.btn-text'); if (bF) bF.textContent = is24Hour ? ' 24H' : ' 12H';
+
+            // Randomize Date Visibility
+            isDateVisible = Math.random() > 0.3; // 70% chance on
+            const bD = btnDate.querySelector('.btn-text'); if (bD) bD.textContent = isDateVisible ? ' 日期: 開' : ' 日期: 關';
+            body.classList.toggle('hide-date', !isDateVisible);
+
+            // Randomize Blink
+            isBlinking = Math.random() > 0.5;
+            updateBlinkingState();
+
+            // Randomize Night Mode (Low probability)
+            const setNight = Math.random() > 0.8;
+            if (isNightMode !== setNight) toggleNightMode();
+
+            // Liquid Master
+            isLiquidVisible = Math.random() > 0.1;
+            body.classList.toggle('show-liquid', isLiquidVisible);
+
+            // Surfaces
+            const surfaces = ['wave', 'flat', 'line'];
+            liquidSettings.surface = surfaces[Math.floor(Math.random() * surfaces.length)];
+
+            liquidContainer.classList.remove('surface-wave', 'surface-flat', 'surface-line');
+            body.classList.remove('line-mode', 'show-water-fill');
+            if (liquidSettings.surface === 'line') {
+                body.classList.add('line-mode');
+            } else {
+                liquidContainer.classList.add('surface-' + liquidSettings.surface);
+            }
+
+            // Opacity
+            const opacities = [0.15, 0.3, 0.5];
+            liquidSettings.opacity = opacities[Math.floor(Math.random() * opacities.length)];
+            document.documentElement.style.setProperty('--liquid-opacity', liquidSettings.opacity);
+
+            // Interact (Now has 3 states: on, swap, off)
+            const rInteract = Math.random();
+            if (rInteract < 0.33) liquidSettings.interact = 'off';
+            else if (rInteract < 0.66) liquidSettings.interact = 'on';
+            else liquidSettings.interact = 'swap';
+
+            updateInteractMode(liquidSettings.interact);
+
+            // Reset
+            liquidSettings.reset = Math.random() > 0.5 ? 'instant' : 'drain';
+
+            // Dependent
+            if (liquidSettings.surface === 'line') {
+                const widths = [1, 1.5, 2];
+                liquidSettings.scaleWidth = widths[Math.floor(Math.random() * widths.length)];
+                document.documentElement.style.setProperty('--scale-width', liquidSettings.scaleWidth);
+
+                liquidSettings.waterFill = Math.random() > 0.3;
+                if (liquidSettings.waterFill) {
+                    body.classList.add('show-water-fill');
+                    applyRiseMode('step');
+                } else {
+                    liquidSettings.rise = Math.random() > 0.5 ? 'smooth' : 'step';
+                    applyRiseMode(liquidSettings.rise);
+                }
+            } else {
+                liquidSettings.rise = Math.random() > 0.5 ? 'smooth' : 'step';
+                applyRiseMode(liquidSettings.rise);
+            }
+
+            updateControlStates();
+            updateClock();
+        }
+
+        initClock(); setInterval(updateClock, 1000); updateClock();
+        startWaveAnimation(); // Start the sync loop
+        // Burn-in jitter disabled for swap alignment
+        // setInterval(() => {
+        //     const x = Math.floor(Math.random() * MAX_JITTER * 2) - MAX_JITTER, y = Math.floor(Math.random() * MAX_JITTER * 2) - MAX_JITTER;
+        //     const transform = `translate(${x}px, ${y}px)`;
+        //     clockContainer.style.transform = transform;
+        //     const clockContainerSwap = document.getElementById('clock-container-swap');
+        //     if (clockContainerSwap) clockContainerSwap.style.transform = transform;
+        // }, BURN_IN_INTERVAL);
+
+        // Palette Button Toggle Panel
+        btnPalette.addEventListener('click', e => {
+            e.stopPropagation();
+            palettePanel.classList.toggle('visible');
+            liquidPanel.classList.remove('visible');
+        });
+
+        btnBlink.addEventListener('click', e => { e.stopPropagation(); isBlinking = !isBlinking; updateBlinkingState(); });
+        btnFormat.addEventListener('click', e => { e.stopPropagation(); is24Hour = !is24Hour; const b = e.currentTarget.querySelector('.btn-text'); if (b) b.textContent = is24Hour ? ' 24H' : ' 12H'; updateClock(); });
+        btnDate.addEventListener('click', e => { e.stopPropagation(); isDateVisible = !isDateVisible; const b = e.currentTarget.querySelector('.btn-text'); if (b) b.textContent = isDateVisible ? ' 日期: 開' : ' 日期: 關'; body.classList.toggle('hide-date', !isDateVisible); });
+
+        btnLiquid.addEventListener('click', e => {
+            e.stopPropagation();
+            liquidPanel.classList.toggle('visible');
+            palettePanel.classList.remove('visible');
+        });
+
+        btnRandom.addEventListener('click', e => {
+            e.stopPropagation();
+            randomizeSettings();
+        });
+
+        body.addEventListener('click', e => {
+            if (!liquidPanel.contains(e.target) && e.target !== btnLiquid) liquidPanel.classList.remove('visible');
+            if (!palettePanel.contains(e.target) && e.target !== btnPalette) palettePanel.classList.remove('visible');
+            body.classList.toggle('show-controls');
+        });
+
+        liquidPanel.addEventListener('click', e => { e.stopPropagation(); });
+        palettePanel.addEventListener('click', e => { e.stopPropagation(); });
+
+        document.querySelectorAll('.panel-option').forEach(opt => {
+            opt.addEventListener('click', e => {
+                const st = e.target.dataset.setting, v = e.target.dataset.value;
+                if (st === 'master') { isLiquidVisible = (v === 'on'); body.classList.toggle('show-liquid', isLiquidVisible); }
+                else if (st === 'opacity') { liquidSettings.opacity = parseFloat(v); document.documentElement.style.setProperty('--liquid-opacity', v); }
+                else if (st === 'rise') { applyRiseMode(v); updateClock(); }
+                else if (st === 'surface') {
+                    liquidSettings.surface = v;
+                    liquidContainer.classList.remove('surface-wave', 'surface-flat', 'surface-line');
+                    body.classList.remove('line-mode', 'show-water-fill');
+                    if (v === 'line') {
+                        body.classList.add('line-mode');
+                        if (liquidSettings.waterFill) {
+                            body.classList.add('show-water-fill');
+                            if (liquidSettings.rise !== 'step') applyRiseMode('step');
+                        }
+                    } else {
+                        liquidContainer.classList.add('surface-' + v);
+                    }
+                }
+                else if (st === 'interact') {
+                    liquidSettings.interact = v;
+                    updateInteractMode(v);
+                }
+                else if (st === 'reset') { liquidSettings.reset = v; }
+                else if (st === 'scalewidth') { liquidSettings.scaleWidth = parseFloat(v); document.documentElement.style.setProperty('--scale-width', v); }
+                else if (st === 'waterfill') {
+                    liquidSettings.waterFill = (v === 'on');
+                    body.classList.toggle('show-water-fill', liquidSettings.waterFill && liquidSettings.surface === 'line');
+                    if (liquidSettings.waterFill && liquidSettings.surface === 'line' && liquidSettings.rise !== 'step') applyRiseMode('step');
+                }
+                updateControlStates();
+            });
+        });
+
+        function updateInteractMode(mode) {
+            body.classList.toggle('liquid-interact', mode === 'on');
+            body.classList.toggle('swap-active', mode === 'swap');
+        }
+
+        function toggleNightMode() { isNightMode = !isNightMode; body.classList.toggle('night-mode', isNightMode); nightOverlay.style.opacity = isNightMode ? '0.6' : '0'; const b = btnNight.querySelector('.btn-text'); if (b) b.textContent = isNightMode ? ' 日間模式' : ' 夜間模式'; if (!isNightMode) { const p = PALETTE_DATA[currentPaletteIndex]; document.documentElement.style.setProperty('--color-a', p.colors[0]); document.documentElement.style.setProperty('--color-b', p.colors[1]); } }
+        btnNight.addEventListener('click', e => { e.stopPropagation(); toggleNightMode(); });
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').then(() => console.log('SW OK')).catch(e => console.error('SW Fail', e)); }
+    </script>
+</body>
+
+</html>
