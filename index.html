@@ -150,7 +150,15 @@
 
         body.scale-flipped #liquid-second-label {
             left: auto;
-            right: 25px;
+            right: 70px;
+            text-align: right;
+        }
+
+        /* Adjust padding when scale is flipped to avoid overlap */
+        body.scale-flipped #clock-container,
+        body.scale-flipped #clock-container-swap {
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(80px, env(safe-area-inset-right));
         }
 
         .scale-mark {
@@ -342,6 +350,8 @@
             letter-spacing: 2px;
             z-index: 25;
             transition: color 2s ease;
+            line-height: 1.2;
+            white-space: nowrap;
         }
 
         #ampm-standalone {
@@ -379,13 +389,17 @@
             display: flex;
             gap: 15px;
             opacity: 0;
-            transition: opacity 0.3s;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
             z-index: 30;
+            pointer-events: none;
         }
 
         body:active #controls,
         body.show-controls #controls {
             opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
         }
 
         .btn {
@@ -953,8 +967,13 @@
             /* Colors for minutes-row in Swap Mode (Portrait) */
             /* Normal: minutes are Color B */
             /* Swap: minutes should be Color A */
-            #minutes-row-swap .digit {
-                color: var(--color-a);
+            #clock-container-swap #minutes-row-swap .digit {
+                color: var(--color-a) !important;
+            }
+
+            /* Fix Swap Clock Portrait Colors: Hours should be solid Color B (Inverse of Main A) */
+            #clock-container-swap #time-swap .digit-wrapper .digit {
+                color: var(--color-b) !important;
             }
 
             body.hide-date #clock-container-swap #time-swap {
@@ -1420,6 +1439,7 @@
                 ds.style.margin = '1vh 0';
                 ds.style.fontWeight = '700';
                 ds.style.lineHeight = '1.2';
+                ds.style.whiteSpace = 'nowrap';
                 ds.style.padding = '0'; /* Ensure no padding diff */
 
                 document.body.appendChild(ds);
@@ -1549,7 +1569,12 @@
             updateDigitInWrapper(mw[1], ms[1], 1, true);
 
             const wk = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            document.getElementById('date').textContent = (ap && isDateVisible) ? `${ap}｜${now.getMonth() + 1}月${now.getDate()}日 ${wk[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 ${wk[now.getDay()]}`;
+            const dateStr = (ap && isDateVisible) ? `${ap}｜${now.getMonth() + 1}月${now.getDate()}日 ${wk[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 ${wk[now.getDay()]}`;
+            document.getElementById('date').textContent = dateStr;
+
+            // Sync dummy date text for perfect alignment in portrait swap
+            const ds = document.getElementById('date-swap-dummy');
+            if (ds) ds.textContent = dateStr;
         }
 
         function updateDigitInWrapper(w, nc, wrapperIndex, isMinutesRow) {
