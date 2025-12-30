@@ -326,9 +326,7 @@
 
         body.hide-date .digit-wrapper,
         body.hide-date.mode-12h .digit-wrapper {
-            /* Adjust margins or width if needed for 48vw? 
-                Swap didn't change wrapper size? 
-                Let's check Swap CSS. */
+            width: 26.5vw;
         }
 
         /* ... */
@@ -645,7 +643,7 @@
             padding: 0;
             background-color: black;
             color: white;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
             position: fixed;
             width: 100%;
@@ -965,6 +963,12 @@
         body.hide-date.mode-12h #clock-container-swap #time-swap {
             font-size: 48vw;
             /* Updated to 48vw */
+        }
+
+        /* Fix Wrapper Width for Swap Clock Landscape Hide Date */
+        body.hide-date #clock-container-swap .digit-wrapper,
+        body.hide-date.mode-12h #clock-container-swap .digit-wrapper {
+            width: 26.5vw;
         }
 
         /* Portrait Mode Sync */
