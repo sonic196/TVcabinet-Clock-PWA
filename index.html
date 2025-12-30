@@ -318,6 +318,19 @@
             display: none !important;
         }
 
+        /* Match Swap Clock's 48vw for Landscape Hide Date */
+        body.hide-date #time,
+        body.hide-date.mode-12h #time {
+            font-size: 48vw;
+        }
+
+        body.hide-date .digit-wrapper,
+        body.hide-date.mode-12h .digit-wrapper {
+            /* Adjust margins or width if needed for 48vw? 
+                Swap didn't change wrapper size? 
+                Let's check Swap CSS. */
+        }
+
         /* ... */
         #clock-container-swap.mode-12h #time-swap {
             font-size: 40vw;
@@ -625,6 +638,20 @@
             z-index: 20;
         }
 
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            color: white;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            touch-action: none;
+        }
+
         #minutes-row {
             display: none;
         }
@@ -700,6 +727,12 @@
 
             #date.blink {
                 animation: blinker 2s linear infinite;
+            }
+
+            /* Force Date Visible in Portrait - Override hide-date class */
+            body.hide-date #date {
+                display: block !important;
+                opacity: 0.8;
             }
 
             #controls {
@@ -965,6 +998,17 @@
                 width: 64vw !important;
                 height: 65vw !important;
                 margin: 0 -9vw !important;
+            }
+
+            body.hide-date #clock-container-swap #minutes-row-swap {
+                font-size: 90vw !important;
+            }
+
+            body.hide-date #clock-container-swap .digit-wrapper,
+            body.hide-date #clock-container-swap #minutes-row-swap .digit-wrapper {
+                width: 72vw !important;
+                height: 75vw !important;
+                margin: 0 -10vw !important;
             }
 
             /* Colon and minutes should remain visible in portrait swap to match layout */
@@ -1773,7 +1817,15 @@
 
         btnBlink.addEventListener('click', e => { e.stopPropagation(); isBlinking = !isBlinking; updateBlinkingState(); });
         btnFormat.addEventListener('click', e => { e.stopPropagation(); is24Hour = !is24Hour; const b = e.currentTarget.querySelector('.btn-text'); if (b) b.textContent = is24Hour ? ' 24H' : ' 12H'; updateClock(); });
-        btnDate.addEventListener('click', e => { e.stopPropagation(); isDateVisible = !isDateVisible; const b = e.currentTarget.querySelector('.btn-text'); if (b) b.textContent = isDateVisible ? ' 日期: 開' : ' 日期: 關'; body.classList.toggle('hide-date', !isDateVisible); });
+        btnDate.addEventListener('click', () => {
+            // In Portrait, Date is always locked Visible
+            if (window.matchMedia('(orientation: portrait)').matches) return;
+
+            isDateVisible = !isDateVisible;
+            if (isDateVisible) body.classList.remove('hide-date');
+            else body.classList.add('hide-date');
+            updateClock();
+        });
 
         btnLiquid.addEventListener('click', e => {
             e.stopPropagation();
