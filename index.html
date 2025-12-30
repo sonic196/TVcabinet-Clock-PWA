@@ -37,7 +37,15 @@
             inherits: false;
         }
 
+        @property --wave-height {
+            syntax: '<length>';
+            initial-value: 75px;
+            inherits: true;
+        }
+
         body {
+            --wave-height: 75px;
+            /* Default Medium */
             background-color: var(--bg-color);
             margin: 0;
             height: 100vh;
@@ -81,10 +89,10 @@
 
         #liquid-surface {
             position: absolute;
-            top: -51px;
+            top: calc(var(--wave-height) * -1);
             left: 0;
             width: 200%;
-            height: 51px;
+            height: var(--wave-height);
             background-color: var(--color-a);
             opacity: var(--liquid-opacity);
             mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E");
@@ -97,7 +105,7 @@
             /* width: 200% so we translate from 0 to -50% (which is -100vw) */
             transform: translateX(var(--wave-x, 0px));
             will-change: transform;
-            transition: background-color 2s ease;
+            transition: background-color 2s ease, height 0.5s ease, top 0.5s ease;
         }
 
         /* Keyframes removed - moved to JS */
@@ -132,6 +140,17 @@
 
         body.show-liquid.line-mode #liquid-scale {
             display: block;
+        }
+
+        /* Smart Scale Alignment: If .scale-flipped is present, move to right */
+        body.scale-flipped #liquid-scale {
+            left: auto;
+            right: 0;
+        }
+
+        body.scale-flipped #liquid-second-label {
+            left: auto;
+            right: 25px;
         }
 
         .scale-mark {
@@ -743,12 +762,9 @@
                 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q250,0 500,50 T1000,50 L1000,100 L0,100 Z' fill='black' /%3E%3C/svg%3E"),
                 linear-gradient(to top, black 0%, black 100%);
 
-            /* Mask Size: 100% width (100vw) matches the tile size of the liquid wave (which is 200% width but 2 tiles) */
-            /* Wait, Liquid is 200% width, mask-size 50% (of 200%) = 100vw. */
-            /* Swap Mask is 100% width. mask-size 100% = 100vw. */
-            /* So sizes match perfectly. */
-            mask-size: 100% 51px, 100% 200%;
-            -webkit-mask-size: 100% 51px, 100% 200%;
+            /* Mask Size: 100% width (100vw). Height set by --wave-height */
+            mask-size: 100% var(--wave-height), 100% 200%;
+            -webkit-mask-size: 100% var(--wave-height), 100% 200%;
 
             mask-repeat: repeat-x, no-repeat;
             -webkit-mask-repeat: repeat-x, no-repeat;
@@ -757,17 +773,16 @@
             -webkit-mask-composite: source-over;
 
             /* Position: X is driven by --wave-x. Y is driven by --mask-y-px */
-            /* Position: X is driven by --wave-x. Y is driven by --mask-y-px */
             /* Note: Liquid moves LEFT (negative X). Mask needs to move LEFT (negative X). */
             /* Crucial Fix: The second layer (gradient) MUST NOT move horizontally! */
-            mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
-            -webkit-mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - 50px), 0px var(--mask-y-px);
+            mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - var(--wave-height) + 1px), 0px var(--mask-y-px);
+            -webkit-mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - var(--wave-height) + 1px), 0px var(--mask-y-px);
 
             /* Optimization */
             will-change: mask-position;
 
             /* Transition for height matching - NO animation for X (handled by variable) */
-            transition: --mask-y-px 1s linear, opacity 0.3s ease;
+            transition: --mask-y-px 1s linear, opacity 0.3s ease, mask-size 0.5s ease, -webkit-mask-size 0.5s ease;
         }
 
         body.swap-active.show-liquid #clock-container-swap {
@@ -928,14 +943,11 @@
             }
 
             /* Colon and minutes should remain visible in portrait swap to match layout */
+            /* Correctly hide colon and minutes in time-swap for Portrait, so only Minutes Row shows them */
             #clock-container-swap #time-swap .colon,
             #clock-container-swap #time-swap .digit-wrapper:nth-child(4),
             #clock-container-swap #time-swap .digit-wrapper:nth-child(5) {
-                display: block !important;
-                /* Or inline-block/flex depending on usage, but block allows flex scaling. Actually just removing display:none defaults to flex item */
-                display: initial !important;
-                opacity: 1;
-                /* Ensure visible */
+                display: none !important;
             }
 
             /* Colors for minutes-row in Swap Mode (Portrait) */
@@ -1004,6 +1016,15 @@
                 <div class="panel-option active" data-setting="surface" data-value="wave">波浪</div>
                 <div class="panel-option" data-setting="surface" data-value="flat">靜面</div>
                 <div class="panel-option" data-setting="surface" data-value="line">刻度</div>
+            </div>
+        </div>
+        <div class="panel-section" id="section-waveheight">
+            <div class="panel-title">浪高</div>
+            <div class="panel-options">
+                <div class="panel-option" data-setting="waveheight" data-value="40">小</div>
+                <div class="panel-option active" data-setting="waveheight" data-value="75">中</div>
+                <div class="panel-option" data-setting="waveheight" data-value="120">大</div>
+                <div class="panel-option" data-setting="waveheight" data-value="180">特大</div>
             </div>
         </div>
         <div class="panel-section">
@@ -1087,7 +1108,7 @@
         ];
 
         let isNightMode = false, isBlinking = true, isLiquidVisible = true, is24Hour = true, isDateVisible = true, currentPaletteIndex = 0, lastHours = '';
-        let liquidSettings = { opacity: 0.3, rise: 'smooth', surface: 'wave', interact: false, reset: 'instant', scaleWidth: 1.5, waterFill: true };
+        let liquidSettings = { opacity: 0.3, rise: 'smooth', surface: 'wave', interact: false, reset: 'instant', scaleWidth: 1.5, waterFill: true, waveHeight: 75 };
 
         const body = document.body, nightOverlay = document.getElementById('night-overlay');
         const btnNight = document.getElementById('toggle-night'), btnBlink = document.getElementById('toggle-blink');
@@ -1097,27 +1118,67 @@
 
         const liquidPanel = document.getElementById('liquid-settings-panel');
         const palettePanel = document.getElementById('palette-panel');
-
         const timeContainer = document.getElementById('time'), minutesContainer = document.getElementById('minutes-row');
         const clockContainer = document.getElementById('clock-container'), dateElement = document.getElementById('date');
         const liquidContainer = document.getElementById('liquid-container'), liquidScale = document.getElementById('liquid-scale');
         const liquidSecondLabel = document.getElementById('liquid-second-label');
 
-        function generateScaleMarks() { liquidScale.innerHTML = ''; for (let i = 0; i <= 60; i++) { const mark = document.createElement('div'); if (i % 10 === 0) mark.className = 'scale-mark major'; else if (i % 5 === 0) mark.className = 'scale-mark medium'; else mark.className = 'scale-mark'; mark.dataset.second = i; mark.style.bottom = `${(i / 60) * 100}%`; liquidScale.appendChild(mark); } }
+        // Smart Scale Detection
+        function handleSafeAreas() {
+            // Create a temporary element to measure safe area
+            const r = document.querySelector(':root');
+            const rs = getComputedStyle(r);
+            // Browser support for reading env() directly via JS varies.
+            // Reliable way: create hidden div, set padding: env(safe-area-inset-left), read padding.
+            const div = document.createElement('div');
+            div.style.paddingLeft = 'env(safe-area-inset-left)';
+            div.style.paddingRight = 'env(safe-area-inset-right)';
+            div.style.position = 'absolute';
+            div.style.visibility = 'hidden';
+            document.body.appendChild(div);
+
+            const pl = parseFloat(getComputedStyle(div).paddingLeft) || 0;
+            const pr = parseFloat(getComputedStyle(div).paddingRight) || 0;
+            document.body.removeChild(div);
+
+            // If Left Inset is significant (> 15px), flip scale to Right.
+            // If landscape and HOME button is on Left, then Notch is on Right -> Left is safe.
+            // If landscape and HOME button on Right, Notch is Left -> Flip to Right.
+            if (pl > 20) {
+                body.classList.add('scale-flipped');
+            } else {
+                body.classList.remove('scale-flipped');
+            }
+        }
+        window.addEventListener('resize', handleSafeAreas);
+        window.addEventListener('orientationchange', () => setTimeout(handleSafeAreas, 200));
+
+        // ... (existing functions)
+
         function updateControlStates() {
             const s = document.getElementById('section-scalewidth'), w = document.getElementById('section-waterfill');
+            const wh = document.getElementById('section-waveheight');
+
             if (liquidSettings.surface === 'line') {
                 s.classList.remove('disabled');
                 w.classList.remove('disabled');
+                wh.classList.add('disabled'); // Wave Height irrelevant for Line
                 if (liquidSettings.waterFill && liquidSettings.rise !== 'step') {
                     applyRiseMode('step');
                 }
+            } else if (liquidSettings.surface === 'flat') {
+                s.classList.add('disabled');
+                w.classList.add('disabled');
+                wh.classList.add('disabled'); // Wave Height irrelevant for Flat
             } else {
                 s.classList.add('disabled');
                 w.classList.add('disabled');
+                wh.classList.remove('disabled'); // Wave Height active
             }
             updatePanelUI();
         }
+
+        // ...
 
         function updatePanelUI() {
             document.querySelectorAll('#liquid-settings-panel .panel-option').forEach(opt => {
@@ -1125,9 +1186,7 @@
                 let isActive = false;
                 if (st === 'master') isActive = (val === (isLiquidVisible ? 'on' : 'off'));
                 else if (st === 'interact') {
-                    // Normalizing: if boolean true -> check 'on', false -> check 'off'
-                    // if string 'swap' -> check 'swap'
-                    // if string 'on'/'off' -> check exact
+                    // ... (same)
                     const current = liquidSettings.interact;
                     if (val === 'swap') isActive = (current === 'swap');
                     else if (val === 'on') isActive = (current === true || current === 'on');
@@ -1136,11 +1195,86 @@
                 else if (st === 'waterfill') isActive = (val === (liquidSettings.waterFill ? 'on' : 'off'));
                 else if (st === 'scalewidth') isActive = (parseFloat(val) === liquidSettings.scaleWidth);
                 else if (st === 'opacity') isActive = (parseFloat(val) === liquidSettings.opacity);
+                else if (st === 'waveheight') isActive = (parseInt(val) === liquidSettings.waveHeight);
                 else isActive = (val === liquidSettings[st]);
 
                 opt.classList.toggle('active', isActive);
             });
         }
+
+        // ...
+
+        // Listener Update
+        document.querySelectorAll('.panel-option').forEach(opt => {
+            opt.addEventListener('click', e => {
+                const st = e.target.dataset.setting, v = e.target.dataset.value;
+
+                if (st === 'master') { isLiquidVisible = (v === 'on'); body.classList.toggle('show-liquid', isLiquidVisible); }
+                else if (st === 'opacity') { liquidSettings.opacity = parseFloat(v); document.documentElement.style.setProperty('--liquid-opacity', v); }
+                else if (st === 'waveheight') {
+                    liquidSettings.waveHeight = parseInt(v);
+                    document.documentElement.style.setProperty('--wave-height', v + 'px');
+                }
+                else if (st === 'rise') { applyRiseMode(v); updateClock(); }
+                else if (st === 'surface') {
+                    liquidSettings.surface = v;
+                    liquidContainer.classList.remove('surface-wave', 'surface-flat', 'surface-line');
+                    body.classList.remove('line-mode', 'show-water-fill');
+                    if (v === 'line') {
+                        body.classList.add('line-mode');
+                        if (liquidSettings.waterFill) {
+                            body.classList.add('show-water-fill');
+                            if (liquidSettings.rise !== 'step') applyRiseMode('step');
+                        }
+                    } else {
+                        liquidContainer.classList.add('surface-' + v);
+                    }
+                }
+                else if (st === 'interact') {
+                    liquidSettings.interact = v;
+                    updateInteractMode(v);
+                }
+                else if (st === 'reset') { liquidSettings.reset = v; }
+                else if (st === 'scalewidth') { liquidSettings.scaleWidth = parseFloat(v); document.documentElement.style.setProperty('--scale-width', v); }
+                else if (st === 'waterfill') {
+                    liquidSettings.waterFill = (v === 'on');
+                    body.classList.toggle('show-water-fill', liquidSettings.waterFill && liquidSettings.surface === 'line');
+                    if (liquidSettings.waterFill && liquidSettings.surface === 'line' && liquidSettings.rise !== 'step') applyRiseMode('step');
+                }
+                updateControlStates();
+            });
+        });
+
+        // ...
+
+        function initClock() {
+            handleSafeAreas(); // Init check
+
+            // Main clock
+            for (let i = 0; i < 5; i++) { if (i === 2) { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; timeContainer.appendChild(c); } else { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); timeContainer.appendChild(w); } }
+            for (let i = 0; i < 2; i++) { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); minutesContainer.appendChild(w); }
+
+            // Swap clock (same structure)
+            const timeSwap = document.getElementById('time-swap');
+            const minutesSwap = document.getElementById('minutes-row-swap');
+            if (timeSwap) {
+                for (let i = 0; i < 5; i++) { if (i === 2) { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; timeSwap.appendChild(c); } else { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); timeSwap.appendChild(w); } }
+            }
+            if (minutesSwap) {
+                for (let i = 0; i < 2; i++) { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); minutesSwap.appendChild(w); }
+            }
+
+            renderPalettePanel();
+            updatePalette(currentPaletteIndex, false);
+            handleOrientationChange(portraitQuery);
+            updateBlinkingState();
+            generateScaleMarks();
+            updateControlStates();
+        }
+
+
+        function generateScaleMarks() { liquidScale.innerHTML = ''; for (let i = 0; i <= 60; i++) { const mark = document.createElement('div'); if (i % 10 === 0) mark.className = 'scale-mark major'; else if (i % 5 === 0) mark.className = 'scale-mark medium'; else mark.className = 'scale-mark'; mark.dataset.second = i; mark.style.bottom = `${(i / 60) * 100}%`; liquidScale.appendChild(mark); } }
+
 
         function applyRiseMode(mode) {
             liquidSettings.rise = mode;
@@ -1157,28 +1291,7 @@
             }
         }
 
-        function initClock() {
-            // Main clock
-            for (let i = 0; i < 5; i++) { if (i === 2) { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; timeContainer.appendChild(c); } else { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); timeContainer.appendChild(w); } }
-            for (let i = 0; i < 2; i++) { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); minutesContainer.appendChild(w); }
 
-            // Swap clock (same structure)
-            const timeSwap = document.getElementById('time-swap');
-            const minutesSwap = document.getElementById('minutes-row-swap');
-            if (timeSwap) {
-                for (let i = 0; i < 5; i++) { if (i === 2) { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; timeSwap.appendChild(c); } else { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); timeSwap.appendChild(w); } }
-            }
-            if (minutesSwap) {
-                for (let i = 0; i < 2; i++) { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); minutesSwap.appendChild(w); }
-            }
-
-            renderPalettePanel();
-            updatePalette(currentPaletteIndex, false); // False = don't increment, just set initial
-            handleOrientationChange(portraitQuery);
-            updateBlinkingState();
-            generateScaleMarks();
-            updateControlStates();
-        }
 
         function renderPalettePanel() {
             palettePanel.innerHTML = '';
@@ -1532,9 +1645,8 @@
             isBlinking = Math.random() > 0.5;
             updateBlinkingState();
 
-            // Randomize Night Mode (Low probability)
-            const setNight = Math.random() > 0.8;
-            if (isNightMode !== setNight) toggleNightMode();
+            // Randomize Night Mode - REMOVED in v14 as per request
+            // User prefers manual control for Night Mode to avoid sudden dark/light jumps.
 
             // Liquid Master
             isLiquidVisible = Math.random() > 0.1;
@@ -1633,40 +1745,7 @@
         liquidPanel.addEventListener('click', e => { e.stopPropagation(); });
         palettePanel.addEventListener('click', e => { e.stopPropagation(); });
 
-        document.querySelectorAll('.panel-option').forEach(opt => {
-            opt.addEventListener('click', e => {
-                const st = e.target.dataset.setting, v = e.target.dataset.value;
-                if (st === 'master') { isLiquidVisible = (v === 'on'); body.classList.toggle('show-liquid', isLiquidVisible); }
-                else if (st === 'opacity') { liquidSettings.opacity = parseFloat(v); document.documentElement.style.setProperty('--liquid-opacity', v); }
-                else if (st === 'rise') { applyRiseMode(v); updateClock(); }
-                else if (st === 'surface') {
-                    liquidSettings.surface = v;
-                    liquidContainer.classList.remove('surface-wave', 'surface-flat', 'surface-line');
-                    body.classList.remove('line-mode', 'show-water-fill');
-                    if (v === 'line') {
-                        body.classList.add('line-mode');
-                        if (liquidSettings.waterFill) {
-                            body.classList.add('show-water-fill');
-                            if (liquidSettings.rise !== 'step') applyRiseMode('step');
-                        }
-                    } else {
-                        liquidContainer.classList.add('surface-' + v);
-                    }
-                }
-                else if (st === 'interact') {
-                    liquidSettings.interact = v;
-                    updateInteractMode(v);
-                }
-                else if (st === 'reset') { liquidSettings.reset = v; }
-                else if (st === 'scalewidth') { liquidSettings.scaleWidth = parseFloat(v); document.documentElement.style.setProperty('--scale-width', v); }
-                else if (st === 'waterfill') {
-                    liquidSettings.waterFill = (v === 'on');
-                    body.classList.toggle('show-water-fill', liquidSettings.waterFill && liquidSettings.surface === 'line');
-                    if (liquidSettings.waterFill && liquidSettings.surface === 'line' && liquidSettings.rise !== 'step') applyRiseMode('step');
-                }
-                updateControlStates();
-            });
-        });
+
 
         function updateInteractMode(mode) {
             body.classList.toggle('liquid-interact', mode === 'on');
