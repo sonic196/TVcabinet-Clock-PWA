@@ -148,6 +148,11 @@
             right: 0;
         }
 
+        body.scale-flipped .scale-mark {
+            left: auto;
+            right: 0;
+        }
+
         body.scale-flipped #liquid-second-label {
             left: auto;
             right: 70px;
@@ -379,6 +384,12 @@
             #ampm-standalone {
                 bottom: max(55px, calc(env(safe-area-inset-bottom) + 35px));
                 right: max(20px, env(safe-area-inset-right));
+            }
+
+            /* Shift Date/AMPM when Scale is Flipped (Right Side) */
+            body.scale-flipped #date,
+            body.scale-flipped #ampm-standalone {
+                right: max(85px, env(safe-area-inset-right));
             }
         }
 
