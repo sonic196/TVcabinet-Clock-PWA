@@ -1651,9 +1651,31 @@
         }
 
         function updateDigitInWrapper(w, nc, wrapperIndex, isMinutesRow) {
+            // Optimization: If invalid/hidden (backgrounded), skip animation to prevent RAF buildup
+            if (document.hidden) {
+                w.textContent = nc;
+                // Still need to sync Swap Clock dummy text if applicable?
+                // Swap digits logic handles nc update?
+                // JS below syncs swap digits. We should do that too.
+                const swapContainer = isMinutesRow
+                    ? document.getElementById('minutes-row-swap')
+                    : document.getElementById('time-swap');
+                if (swapContainer) {
+                    const swapDigits = swapContainer.querySelectorAll('.digit-wrapper .digit');
+                    const swapDigit = swapDigits[wrapperIndex];
+                    if (swapDigit) swapDigit.textContent = nc;
+                }
+                return;
+            }
+
             const cd = w.querySelector('.digit:last-child'), cv = cd ? cd.textContent : '';
             const ip = portraitQuery.matches;
             if (cv !== nc) {
+                // Safety Cleanup: Ensure no more than 1 old digit exists (Prevent Memory Leak)
+                while (w.children.length > 1) {
+                    w.removeChild(w.firstChild);
+                }
+
                 const nd = document.createElement('span');
                 nd.className = 'digit';
                 nd.textContent = nc;
