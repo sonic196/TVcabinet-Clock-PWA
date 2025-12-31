@@ -1349,6 +1349,11 @@
             // Swap clock (same structure)
             const timeSwap = document.getElementById('time-swap');
             const minutesSwap = document.getElementById('minutes-row-swap');
+
+            // Prevention: Clear existing digits to avoid duplication on re-init
+            if (timeSwap) timeSwap.innerHTML = '';
+            if (minutesSwap) minutesSwap.innerHTML = '';
+
             if (timeSwap) {
                 for (let i = 0; i < 5; i++) { if (i === 2) { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; timeSwap.appendChild(c); } else { const w = document.createElement('div'); w.className = 'digit-wrapper'; const d = document.createElement('span'); d.className = 'digit'; w.appendChild(d); timeSwap.appendChild(w); } }
             }
@@ -1468,11 +1473,21 @@
             }
         }
         // JS Driven Wave Animation for Perfect Sync
+        // JS Driven Wave Animation for Perfect Sync
         function startWaveAnimation() {
+            if (window.waveAnimStarted) return;
+            window.waveAnimStarted = true;
+
             const duration = 5000; // 5 seconds for one cycle
             const start = performance.now();
 
             function animate(now) {
+                // Background Optimization: Pause RAF loop logic if hidden
+                if (document.hidden) {
+                    requestAnimationFrame(animate);
+                    return;
+                }
+
                 // Calculate phase (0 to 1)
                 const elapsed = now - start;
                 const phase = (elapsed % duration) / duration;
