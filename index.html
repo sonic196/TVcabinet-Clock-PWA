@@ -799,8 +799,12 @@
             padding-right: max(20px, env(safe-area-inset-right));
             box-sizing: border-box;
 
-            /* Hardware Acceleration REMOVED to match Main Clock context */
-            /* transform: translate3d(0, 0, 0); */
+            /* Hardware Acceleration Re-enabled for Performance/Heat Optimization */
+            transform: translate3d(0, 0, 0);
+            contain: paint layout;
+            /* Isolate layout/paint */
+            backface-visibility: hidden;
+            /* Further GPU hint */
 
             /* Sync Mechanism: Always Display but Hide Opacity */
             display: flex;
@@ -1483,9 +1487,28 @@
             const swapContainer = document.getElementById('clock-container-swap');
             const liquidContainer = document.getElementById('liquid-container');
 
+            let lastFrameTime = 0;
+            const targetFPS = 30; // 30 FPS cap for battery saving
+            const frameInterval = 1000 / targetFPS;
+
             function animate(now) {
                 // Background Optimization: Pause RAF loop logic if hidden
                 if (document.hidden) {
+                    requestAnimationFrame(animate);
+                    return;
+                }
+
+                // FPS Throttling
+                const delta = now - lastFrameTime;
+                if (delta < frameInterval) {
+                    requestAnimationFrame(animate);
+                    return;
+                }
+                // Adjust for drift, but careful not to spiral if delta is huge (tab switch)
+                lastFrameTime = now - (delta % frameInterval);
+
+                // Skip updates if Surface is not 'wave' (Zero overhead for Flat/Line modes)
+                if (liquidSettings.surface !== 'wave') {
                     requestAnimationFrame(animate);
                     return;
                 }
