@@ -1480,6 +1480,8 @@
 
             const duration = 5000; // 5 seconds for one cycle
             const start = performance.now();
+            const swapContainer = document.getElementById('clock-container-swap');
+            const liquidContainer = document.getElementById('liquid-container');
 
             function animate(now) {
                 // Background Optimization: Pause RAF loop logic if hidden
@@ -1492,15 +1494,13 @@
                 const elapsed = now - start;
                 const phase = (elapsed % duration) / duration;
 
-                // One full cycle is -100vw (which corresponds to -50% of the 200% width liquid)
-                // We use calculate pixel value based on viewport width
+                // One full cycle is -100vw
                 const waveX = phase * -100; // -100vw
 
-                // Set CSS Variable
-                // Use 'vw' unit directly if possible to avoid JS resize listeners?
-                // Yes, var(--wave-x) can be string '-50vw'.
-                // Let's try pure string value to avoid recalc.
-                document.documentElement.style.setProperty('--wave-x', `${waveX}vw`);
+                // Performance Optimization: Update variable ONLY on specific elements
+                // TARGETING BOTH: Ensures Main Liquid Wave and Swap Mask both move.
+                if (swapContainer) swapContainer.style.setProperty('--wave-x', `${waveX}vw`);
+                if (liquidContainer) liquidContainer.style.setProperty('--wave-x', `${waveX}vw`);
 
                 requestAnimationFrame(animate);
             }
@@ -1569,6 +1569,9 @@
         portraitQuery.addEventListener('change', handleOrientationChange);
 
         function updateClock() {
+            // Optimization: Completely pause clock logic when backgrounded
+            if (document.hidden) return;
+
             const now = new Date(); let h = now.getHours(); const m = now.getMinutes(), s = now.getSeconds();
 
             // Automatic Palette Change every hour
@@ -1837,6 +1840,15 @@
             updateControlStates();
             updateClock();
         }
+
+
+        // Visibility API: Resume immediately when waking up
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateClock();
+                // Optionally restart wave if somehow needed, but loop handles resumption automatically
+            }
+        });
 
         initClock(); setInterval(updateClock, 1000); updateClock();
         startWaveAnimation(); // Start the sync loop
