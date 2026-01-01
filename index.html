@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>TVcabinet Clock</title>
+    <title>TVcabinet Clock (v15 Test)</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
     <style>
@@ -104,8 +104,8 @@
             /* JS Controlled Animation for Sync */
             /* width: 200% so we translate from 0 to -50% (which is -100vw) */
             transform: translateX(var(--wave-x, 0px));
-            will-change: transform;
-            transition: background-color 2s ease, height 0.5s ease, top 0.5s ease;
+            /* will-change removed for power saving */
+            transition: background-color 2s ease;
         }
 
         /* Keyframes removed - moved to JS */
@@ -268,10 +268,10 @@
 
         .digit {
             position: absolute;
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 3s ease, color 2s ease;
+            transition: transform 0.3s ease-out, opacity 0.5s ease;
             mix-blend-mode: screen;
             opacity: 0.9;
-            will-change: transform, opacity, color;
+            /* will-change removed for power saving */
         }
 
         .digit-wrapper:nth-child(1) .digit,
@@ -838,8 +838,8 @@
             mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - var(--wave-height) + 1px), 0px var(--mask-y-px);
             -webkit-mask-position: var(--wave-x, 0px) calc(var(--mask-y-px) - var(--wave-height) + 1px), 0px var(--mask-y-px);
 
-            /* Optimization */
-            will-change: mask-position;
+            /* Optimization - will-change removed for power saving */
+            /* will-change: mask-position; */
 
             /* Transition for height matching - NO animation for X (handled by variable) */
             transition: --mask-y-px 1s linear, opacity 0.3s ease, mask-size 0.5s ease, -webkit-mask-size 0.5s ease;
@@ -1054,6 +1054,90 @@
                 margin: 0 -10vw !important;
             }
         }
+
+        /* New Settings Panels */
+        .settings-panel {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 16px;
+            z-index: 1000;
+            min-width: 280px;
+            max-width: 90vw;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+            pointer-events: none;
+        }
+
+        .settings-panel.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+
+        .panel-header {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Performance Panel Specific */
+        .perf-modes {
+            gap: 4px;
+        }
+
+        .perf-modes .panel-option {
+            font-size: 12px;
+            padding: 8px 4px;
+        }
+
+        .perf-info {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .perf-details {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.8;
+        }
+
+        .perf-item span {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .perf-warnings {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 200, 0, 0.3);
+        }
+
+        .warning-title {
+            color: #ffcc00 !important;
+        }
+
+        .perf-warning-list {
+            font-size: 11px;
+            color: rgba(255, 200, 0, 0.8);
+            line-height: 1.6;
+            margin-top: 4px;
+        }
+
+        .perf-warning-item {
+            padding: 2px 0;
+        }
     </style>
 </head>
 
@@ -1157,12 +1241,64 @@
     </div>
     <div id="controls">
         <button class="btn" id="toggle-palette">🎨<span class="btn-text"> 換色</span></button>
-        <button class="btn" id="toggle-format">🕒<span class="btn-text"> 24H</span></button>
-        <button class="btn" id="toggle-date">📅<span class="btn-text"> 日期: 開</span></button>
-        <button class="btn" id="toggle-liquid">🌊<span class="btn-text"> 水位設定</span></button>
-        <button class="btn" id="toggle-blink">✨<span class="btn-text"> 閃爍: 開</span></button>
-        <button class="btn" id="toggle-night">🌙<span class="btn-text"> 夜間模式</span></button>
+        <button class="btn" id="toggle-time-settings">⏰<span class="btn-text"> 時間</span></button>
+        <button class="btn" id="toggle-liquid">🌊<span class="btn-text"> 液體</span></button>
+        <button class="btn" id="toggle-performance">⚡<span class="btn-text"> 效能</span></button>
         <button class="btn" id="btn-random">🎲<span class="btn-text"> 隨機</span></button>
+        <button class="btn" id="toggle-night">🌙<span class="btn-text"> 夜間</span></button>
+    </div>
+
+    <!-- Time/Date Settings Panel -->
+    <div id="time-settings-panel" class="settings-panel">
+        <div class="panel-header">⏰ 時間日期設定</div>
+        <div class="panel-section">
+            <div class="panel-title">時制</div>
+            <div class="panel-options">
+                <div class="panel-option" data-setting="format" data-value="12h">12H</div>
+                <div class="panel-option active" data-setting="format" data-value="24h">24H</div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-title">日期</div>
+            <div class="panel-options">
+                <div class="panel-option active" data-setting="date" data-value="show">顯示</div>
+                <div class="panel-option" data-setting="date" data-value="hide">隱藏</div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-title">分隔符閃爍</div>
+            <div class="panel-options">
+                <div class="panel-option active" data-setting="blink" data-value="on">開</div>
+                <div class="panel-option" data-setting="blink" data-value="off">關</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Panel -->
+    <div id="performance-panel" class="settings-panel">
+        <div class="panel-header">⚡ 效能模式</div>
+        <div class="panel-section">
+            <div class="panel-options perf-modes">
+                <div class="panel-option" data-setting="perfmode" data-value="standard">🟢 標準</div>
+                <div class="panel-option active" data-setting="perfmode" data-value="powersave">🟡 省電</div>
+                <div class="panel-option" data-setting="perfmode" data-value="ultrasave">🔴 極省</div>
+            </div>
+        </div>
+        <div class="panel-section perf-info">
+            <div class="panel-title">📋 目前設定</div>
+            <div class="perf-details">
+                <div class="perf-item">• 波浪動畫：<span id="perf-wave">15 fps</span></div>
+                <div class="perf-item">• 數字動畫：<span id="perf-digit">淡入淡出</span></div>
+                <div class="perf-item">• 動畫時長：<span id="perf-duration">0.5 秒</span></div>
+                <div class="perf-item">• GPU 加速：<span id="perf-gpu">停用</span></div>
+            </div>
+        </div>
+        <div class="panel-section perf-warnings" id="perf-warnings-section" style="display: none;">
+            <div class="panel-title warning-title">⚠️ 以下功能已被限制</div>
+            <div class="perf-warning-list" id="perf-warning-list">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
     </div>
     <script>
         const BURN_IN_INTERVAL = 60000, MAX_JITTER = 20;
@@ -1192,14 +1328,26 @@
         let isNightMode = false, isBlinking = true, isLiquidVisible = true, is24Hour = true, isDateVisible = true, currentPaletteIndex = 0, lastHours = '';
         let liquidSettings = { opacity: 0.3, rise: 'smooth', surface: 'wave', interact: false, reset: 'instant', scaleWidth: 1.5, waterFill: true, waveHeight: 75 };
 
+        // Performance Mode: 'standard', 'powersave', 'ultrasave'
+        let performanceMode = 'powersave';
+        const PERF_CONFIGS = {
+            standard: { waveFPS: 30, digitAnim: '旋轉 + 縮放', duration: '3 秒', gpu: '啟用', warnings: [] },
+            powersave: { waveFPS: 15, digitAnim: '淡入淡出', duration: '0.5 秒', gpu: '停用', warnings: [] },
+            ultrasave: { waveFPS: 0, digitAnim: '無', duration: '0 秒', gpu: '停用', warnings: ['液體設定 > 水面樣式 (波浪)', '液體設定 > 顏色交互 (交換)'] }
+        };
+
         const body = document.body, nightOverlay = document.getElementById('night-overlay');
-        const btnNight = document.getElementById('toggle-night'), btnBlink = document.getElementById('toggle-blink');
-        const btnFormat = document.getElementById('toggle-format'), btnPalette = document.getElementById('toggle-palette');
-        const btnDate = document.getElementById('toggle-date'), btnLiquid = document.getElementById('toggle-liquid');
+        const btnNight = document.getElementById('toggle-night');
+        const btnPalette = document.getElementById('toggle-palette');
+        const btnLiquid = document.getElementById('toggle-liquid');
         const btnRandom = document.getElementById('btn-random');
+        const btnTimeSettings = document.getElementById('toggle-time-settings');
+        const btnPerformance = document.getElementById('toggle-performance');
 
         const liquidPanel = document.getElementById('liquid-settings-panel');
         const palettePanel = document.getElementById('palette-panel');
+        const timeSettingsPanel = document.getElementById('time-settings-panel');
+        const performancePanel = document.getElementById('performance-panel');
         const timeContainer = document.getElementById('time'), minutesContainer = document.getElementById('minutes-row');
         const clockContainer = document.getElementById('clock-container'), dateElement = document.getElementById('date');
         const liquidContainer = document.getElementById('liquid-container'), liquidScale = document.getElementById('liquid-scale');
@@ -1277,12 +1425,12 @@
         // ...
 
         function updatePanelUI() {
+            // Liquid Panel
             document.querySelectorAll('#liquid-settings-panel .panel-option').forEach(opt => {
                 const st = opt.dataset.setting, val = opt.dataset.value;
                 let isActive = false;
                 if (st === 'master') isActive = (val === (isLiquidVisible ? 'on' : 'off'));
                 else if (st === 'interact') {
-                    // ... (same)
                     const current = liquidSettings.interact;
                     if (val === 'swap') isActive = (current === 'swap');
                     else if (val === 'on') isActive = (current === true || current === 'on');
@@ -1293,6 +1441,17 @@
                 else if (st === 'opacity') isActive = (parseFloat(val) === liquidSettings.opacity);
                 else if (st === 'waveheight') isActive = (parseInt(val) === liquidSettings.waveHeight);
                 else isActive = (val === liquidSettings[st]);
+
+                opt.classList.toggle('active', isActive);
+            });
+
+            // Time Settings Panel
+            document.querySelectorAll('#time-settings-panel .panel-option').forEach(opt => {
+                const st = opt.dataset.setting, val = opt.dataset.value;
+                let isActive = false;
+                if (st === 'format') isActive = (val === (is24Hour ? '24h' : '12h'));
+                else if (st === 'date') isActive = (val === (isDateVisible ? 'show' : 'hide'));
+                else if (st === 'blink') isActive = (val === (isBlinking ? 'on' : 'off'));
 
                 opt.classList.toggle('active', isActive);
             });
@@ -1460,8 +1619,9 @@
         }
 
         function updateBlinkingState() {
-            const b = btnBlink.querySelector('.btn-text');
-            if (b) b.textContent = isBlinking ? ' 閃爍: 開' : ' 閃爍: 關';
+            // Update Panel State
+            updatePanelUI(); // To sync the 'blink' option in panel
+
             const colons = document.querySelectorAll('.colon');
             const d = document.getElementById('date'), p = portraitQuery.matches;
 
@@ -1488,8 +1648,6 @@
             const liquidContainer = document.getElementById('liquid-container');
 
             let lastFrameTime = 0;
-            const targetFPS = 30; // 30 FPS cap for battery saving
-            const frameInterval = 1000 / targetFPS;
 
             function animate(now) {
                 // Background Optimization: Pause RAF loop logic if hidden
@@ -1497,6 +1655,18 @@
                     requestAnimationFrame(animate);
                     return;
                 }
+
+                // Performance Mode: Get dynamic FPS from config
+                const config = PERF_CONFIGS[performanceMode];
+                const targetFPS = config.waveFPS;
+
+                // Ultrasave: Complete skip
+                if (targetFPS === 0) {
+                    requestAnimationFrame(animate);
+                    return;
+                }
+
+                const frameInterval = 1000 / targetFPS;
 
                 // FPS Throttling
                 const delta = now - lastFrameTime;
@@ -1695,9 +1865,6 @@
             // Optimization: If invalid/hidden (backgrounded), skip animation to prevent RAF buildup
             if (document.hidden) {
                 w.textContent = nc;
-                // Still need to sync Swap Clock dummy text if applicable?
-                // Swap digits logic handles nc update?
-                // JS below syncs swap digits. We should do that too.
                 const swapContainer = isMinutesRow
                     ? document.getElementById('minutes-row-swap')
                     : document.getElementById('time-swap');
@@ -1710,11 +1877,31 @@
             }
 
             const cd = w.querySelector('.digit:last-child'), cv = cd ? cd.textContent : '';
-            const ip = portraitQuery.matches;
             if (cv !== nc) {
-                // Safety Cleanup: Ensure no more than 1 old digit exists (Prevent Memory Leak)
+                // Safety Cleanup: Ensure no more than 1 old digit exists
                 while (w.children.length > 1) {
                     w.removeChild(w.firstChild);
+                }
+
+                // Ultrasave: No animation at all
+                if (performanceMode === 'ultrasave') {
+                    if (cd) cd.textContent = nc;
+                    else {
+                        const nd = document.createElement('span');
+                        nd.className = 'digit';
+                        nd.textContent = nc;
+                        w.appendChild(nd);
+                    }
+                    // Sync to swap clock
+                    const swapContainer = isMinutesRow
+                        ? document.getElementById('minutes-row-swap')
+                        : document.getElementById('time-swap');
+                    if (swapContainer) {
+                        const swapDigits = swapContainer.querySelectorAll('.digit-wrapper .digit');
+                        const swapDigit = swapDigits[wrapperIndex];
+                        if (swapDigit) swapDigit.textContent = nc;
+                    }
+                    return;
                 }
 
                 const nd = document.createElement('span');
@@ -1722,29 +1909,43 @@
                 nd.textContent = nc;
                 nd.style.opacity = '0';
 
-                // Random rotation/offset for stacking effect
-                let r = 0, sx = 0, sy = 0;
-                if (!ip) {
-                    r = Math.random() * 10 - 5;
-                    sx = (Math.random() - 0.5) * 2;
-                    sy = (Math.random() - 0.5) * 2;
-                }
-                const finalTransform = `rotate(${r}deg) scale(1) translate(${sx}vw, ${sy}vw)`;
-                nd.style.transform = `rotate(${r}deg) scale(0.8) translate(${sx}vw, ${sy}vw)`;
-                w.appendChild(nd);
-
-                requestAnimationFrame(() => {
-                    nd.style.opacity = '1';
-                    nd.style.transform = finalTransform;
-                    if (cd) {
-                        cd.style.opacity = '0';
-                        const exitR = ip ? 0 : Math.random() * 10 - 5;
-                        cd.style.transform = ip ? 'scale(1.2)' : `rotate(${exitR}deg) scale(1.2) translate(${sx * 1.5}vw, ${sy * 1.5}vw)`;
-                        setTimeout(() => { if (cd.parentNode === w) w.removeChild(cd); }, 3000);
+                // Standard mode: Use rotation/scale effects
+                if (performanceMode === 'standard') {
+                    const ip = portraitQuery.matches;
+                    let r = 0, sx = 0, sy = 0;
+                    if (!ip) {
+                        r = Math.random() * 10 - 5;
+                        sx = (Math.random() - 0.5) * 2;
+                        sy = (Math.random() - 0.5) * 2;
                     }
-                });
+                    const finalTransform = `rotate(${r}deg) scale(1) translate(${sx}vw, ${sy}vw)`;
+                    nd.style.transform = `rotate(${r}deg) scale(0.8) translate(${sx}vw, ${sy}vw)`;
+                    w.appendChild(nd);
 
-                // Sync transform to corresponding swap clock digit
+                    requestAnimationFrame(() => {
+                        nd.style.opacity = '1';
+                        nd.style.transform = finalTransform;
+                        if (cd) {
+                            cd.style.opacity = '0';
+                            const exitR = ip ? 0 : Math.random() * 10 - 5;
+                            cd.style.transform = ip ? 'scale(1.2)' : `rotate(${exitR}deg) scale(1.2) translate(${sx * 1.5}vw, ${sy * 1.5}vw)`;
+                            setTimeout(() => { if (cd.parentNode === w) w.removeChild(cd); }, 3000);
+                        }
+                    });
+                } else {
+                    // Power save mode: Simple fade
+                    w.appendChild(nd);
+
+                    requestAnimationFrame(() => {
+                        nd.style.opacity = '1';
+                        if (cd) {
+                            cd.style.opacity = '0';
+                            setTimeout(() => { if (cd.parentNode === w) w.removeChild(cd); }, 600);
+                        }
+                    });
+                }
+
+                // Sync to swap clock
                 const swapContainer = isMinutesRow
                     ? document.getElementById('minutes-row-swap')
                     : document.getElementById('time-swap');
@@ -1753,7 +1954,6 @@
                     const swapDigit = swapDigits[wrapperIndex];
                     if (swapDigit) {
                         swapDigit.textContent = nc;
-                        swapDigit.style.transform = finalTransform;
                     }
                 }
             }
@@ -1786,7 +1986,7 @@
         }
 
         function randomizeSettings() {
-            // Randomize Palette (Filter Enabled)
+            // Randomize Palette
             const enabledIndices = PALETTE_DATA.map((p, i) => p.enabled ? i : -1).filter(i => i !== -1);
             if (enabledIndices.length > 0) {
                 const rIndex = enabledIndices[Math.floor(Math.random() * enabledIndices.length)];
@@ -1795,19 +1995,15 @@
 
             // Randomize Time Format
             is24Hour = Math.random() > 0.5;
-            const bF = btnFormat.querySelector('.btn-text'); if (bF) bF.textContent = is24Hour ? ' 24H' : ' 12H';
+            // Removed button text update, now handled by updatePanelUI at end
 
             // Randomize Date Visibility
             isDateVisible = Math.random() > 0.3; // 70% chance on
-            const bD = btnDate.querySelector('.btn-text'); if (bD) bD.textContent = isDateVisible ? ' 日期: 開' : ' 日期: 關';
             body.classList.toggle('hide-date', !isDateVisible);
 
             // Randomize Blink
             isBlinking = Math.random() > 0.5;
             updateBlinkingState();
-
-            // Randomize Night Mode - REMOVED in v14 as per request
-            // User prefers manual control for Night Mode to avoid sudden dark/light jumps.
 
             // Liquid Master
             isLiquidVisible = Math.random() > 0.1;
@@ -1830,11 +2026,14 @@
             liquidSettings.opacity = opacities[Math.floor(Math.random() * opacities.length)];
             document.documentElement.style.setProperty('--liquid-opacity', liquidSettings.opacity);
 
-            // Interact (Now has 3 states: on, swap, off)
+            // Interact
             const rInteract = Math.random();
             if (rInteract < 0.33) liquidSettings.interact = 'off';
             else if (rInteract < 0.66) liquidSettings.interact = 'on';
             else liquidSettings.interact = 'swap';
+
+            // Respect Perf Mode in Random
+            if (performanceMode === 'ultrasave' && liquidSettings.interact === 'swap') liquidSettings.interact = 'off';
 
             updateInteractMode(liquidSettings.interact);
 
@@ -1861,6 +2060,7 @@
             }
 
             updateControlStates();
+            updatePanelUI(); // Sync all new values to panels
             updateClock();
         }
 
@@ -1889,24 +2089,32 @@
             e.stopPropagation();
             palettePanel.classList.toggle('visible');
             liquidPanel.classList.remove('visible');
+            timeSettingsPanel.classList.remove('visible');
+            performancePanel.classList.remove('visible');
         });
 
-        btnBlink.addEventListener('click', e => { e.stopPropagation(); isBlinking = !isBlinking; updateBlinkingState(); });
-        btnFormat.addEventListener('click', e => { e.stopPropagation(); is24Hour = !is24Hour; const b = e.currentTarget.querySelector('.btn-text'); if (b) b.textContent = is24Hour ? ' 24H' : ' 12H'; updateClock(); });
-        btnDate.addEventListener('click', () => {
-            // In Portrait, Date is always locked Visible
-            if (window.matchMedia('(orientation: portrait)').matches) return;
-
-            isDateVisible = !isDateVisible;
-            if (isDateVisible) body.classList.remove('hide-date');
-            else body.classList.add('hide-date');
-            updateClock();
+        btnTimeSettings.addEventListener('click', e => {
+            e.stopPropagation();
+            timeSettingsPanel.classList.toggle('visible');
+            palettePanel.classList.remove('visible');
+            liquidPanel.classList.remove('visible');
+            performancePanel.classList.remove('visible');
         });
 
         btnLiquid.addEventListener('click', e => {
             e.stopPropagation();
             liquidPanel.classList.toggle('visible');
             palettePanel.classList.remove('visible');
+            timeSettingsPanel.classList.remove('visible');
+            performancePanel.classList.remove('visible');
+        });
+
+        btnPerformance.addEventListener('click', e => {
+            e.stopPropagation();
+            performancePanel.classList.toggle('visible');
+            palettePanel.classList.remove('visible');
+            liquidPanel.classList.remove('visible');
+            timeSettingsPanel.classList.remove('visible');
         });
 
         btnRandom.addEventListener('click', e => {
@@ -1917,21 +2125,106 @@
         body.addEventListener('click', e => {
             if (!liquidPanel.contains(e.target) && e.target !== btnLiquid) liquidPanel.classList.remove('visible');
             if (!palettePanel.contains(e.target) && e.target !== btnPalette) palettePanel.classList.remove('visible');
+            if (!timeSettingsPanel.contains(e.target) && e.target !== btnTimeSettings) timeSettingsPanel.classList.remove('visible');
+            if (!performancePanel.contains(e.target) && e.target !== btnPerformance) performancePanel.classList.remove('visible');
             body.classList.toggle('show-controls');
         });
 
         liquidPanel.addEventListener('click', e => { e.stopPropagation(); });
         palettePanel.addEventListener('click', e => { e.stopPropagation(); });
+        timeSettingsPanel.addEventListener('click', e => { e.stopPropagation(); });
+        performancePanel.addEventListener('click', e => { e.stopPropagation(); });
 
+        // Time/Date Settings Panel Handlers
+        document.querySelectorAll('#time-settings-panel .panel-option').forEach(opt => {
+            opt.addEventListener('click', e => {
+                const st = e.target.dataset.setting, v = e.target.dataset.value;
 
+                if (st === 'format') {
+                    is24Hour = (v === '24h');
+                    body.classList.toggle('mode-12h', !is24Hour);
+                    document.getElementById('clock-container-swap').classList.toggle('mode-12h', !is24Hour);
+                    updateClock();
+                } else if (st === 'date') {
+                    // In Portrait, Date is locked visible
+                    if (window.matchMedia('(orientation: portrait)').matches && v === 'hide') return;
+                    isDateVisible = (v === 'show');
+                    body.classList.toggle('hide-date', !isDateVisible);
+                    updateClock();
+                } else if (st === 'blink') {
+                    isBlinking = (v === 'on');
+                    updateBlinkingState();
+                }
+
+                // Update active states
+                const section = e.target.closest('.panel-section');
+                section.querySelectorAll('.panel-option').forEach(o => o.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+
+        // Performance Panel Handlers
+        function updatePerformanceDisplay() {
+            const config = PERF_CONFIGS[performanceMode];
+            document.getElementById('perf-wave').textContent = config.waveFPS === 0 ? '停用' : config.waveFPS + ' fps';
+            document.getElementById('perf-digit').textContent = config.digitAnim;
+            document.getElementById('perf-duration').textContent = config.duration;
+            document.getElementById('perf-gpu').textContent = config.gpu;
+
+            // Warning section
+            const warningsSection = document.getElementById('perf-warnings-section');
+            const warningList = document.getElementById('perf-warning-list');
+            if (config.warnings.length > 0) {
+                warningsSection.style.display = 'block';
+                warningList.innerHTML = config.warnings.map(w => `<div class="perf-warning-item">• ${w}</div>`).join('');
+            } else {
+                warningsSection.style.display = 'none';
+            }
+
+            // Update active button
+            document.querySelectorAll('#performance-panel .panel-option[data-setting="perfmode"]').forEach(o => {
+                o.classList.toggle('active', o.dataset.value === performanceMode);
+            });
+        }
+
+        function applyPerformanceMode(mode) {
+            performanceMode = mode;
+
+            // Apply mode-specific settings
+            if (mode === 'ultrasave') {
+                // Force disable wave and swap
+                liquidSettings.surface = 'flat';
+                liquidSettings.interact = 'off';
+                liquidContainer.classList.remove('surface-wave', 'surface-line');
+                liquidContainer.classList.add('surface-flat');
+                body.classList.remove('line-mode', 'swap-active', 'liquid-interact');
+            }
+
+            updateControlStates();
+            updatePerformanceDisplay();
+        }
+
+        document.querySelectorAll('#performance-panel .panel-option[data-setting="perfmode"]').forEach(opt => {
+            opt.addEventListener('click', e => {
+                applyPerformanceMode(e.target.dataset.value);
+            });
+        });
 
         function updateInteractMode(mode) {
+            // Block swap in ultrasave mode
+            if (performanceMode === 'ultrasave' && mode === 'swap') {
+                mode = 'off';
+            }
             body.classList.toggle('liquid-interact', mode === 'on');
             body.classList.toggle('swap-active', mode === 'swap');
         }
 
-        function toggleNightMode() { isNightMode = !isNightMode; body.classList.toggle('night-mode', isNightMode); nightOverlay.style.opacity = isNightMode ? '0.6' : '0'; const b = btnNight.querySelector('.btn-text'); if (b) b.textContent = isNightMode ? ' 日間模式' : ' 夜間模式'; if (!isNightMode) { const p = PALETTE_DATA[currentPaletteIndex]; document.documentElement.style.setProperty('--color-a', p.colors[0]); document.documentElement.style.setProperty('--color-b', p.colors[1]); } }
+        function toggleNightMode() { isNightMode = !isNightMode; body.classList.toggle('night-mode', isNightMode); nightOverlay.style.opacity = isNightMode ? '0.6' : '0'; const b = btnNight.querySelector('.btn-text'); if (b) b.textContent = isNightMode ? ' 日間' : ' 夜間'; if (!isNightMode) { const p = PALETTE_DATA[currentPaletteIndex]; document.documentElement.style.setProperty('--color-a', p.colors[0]); document.documentElement.style.setProperty('--color-b', p.colors[1]); } }
         btnNight.addEventListener('click', e => { e.stopPropagation(); toggleNightMode(); });
+
+        // Initialize performance display
+        updatePerformanceDisplay();
+
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').then(() => console.log('SW OK')).catch(e => console.error('SW Fail', e)); }
     </script>
 </body>
