@@ -512,15 +512,16 @@
         @media (orientation: portrait) {
             #palette-panel {
                 bottom: 80px;
-                left: 50%;
-                right: auto;
-                transform: translateX(-50%) translateY(20px);
+                left: auto;
+                right: 20px;
+                /* Align Right */
+                transform: translateY(20px);
                 width: 85vw;
-                max-width: 350px;
+                max-width: 300px;
             }
 
             #palette-panel.visible {
-                transform: translateX(-50%) translateY(0);
+                transform: translateY(0);
             }
         }
 
@@ -747,14 +748,15 @@
 
             #liquid-settings-panel {
                 bottom: 80px;
-                left: 50%;
-                right: auto;
+                left: auto;
+                right: 20px;
+                /* Align Right */
                 max-height: calc(100vh - 160px);
-                transform: translateX(-50%) translateY(20px);
+                transform: translateY(20px);
             }
 
             #liquid-settings-panel.visible {
-                transform: translateX(-50%) translateY(0);
+                transform: translateY(0);
             }
 
             .btn {
@@ -1059,8 +1061,10 @@
         .settings-panel {
             position: fixed;
             bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
+            left: auto;
+            right: 20px;
+            /* Align Right */
+            transform: translateY(20px);
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -1078,7 +1082,8 @@
         .settings-panel.visible {
             opacity: 1;
             visibility: visible;
-            transform: translateX(-50%) translateY(0);
+            transform: translateY(0);
+            /* Removed translateX */
             pointer-events: auto;
         }
 
@@ -1304,7 +1309,7 @@
         const BURN_IN_INTERVAL = 60000, MAX_JITTER = 20;
         const PALETTE_DATA = [
             { name: "經典藍", colors: ['#4facfe', '#00f2fe'], enabled: true },
-            { name: "日落氛圍", colors: ['#ff0844', '#ffb199'], enabled: true },
+            { name: "日落氛圍", colors: ['#ff512f', '#dd2476'], enabled: true }, /* Adjusted to Bloody Mary / Deep Sunset */
             { name: "極光綠", colors: ['#0ba360', '#3cba92'], enabled: true },
             { name: "皇家紫", colors: ['#667eea', '#764ba2'], enabled: true },
             { name: "電光紫", colors: ['#f77062', '#fe5196'], enabled: true },
@@ -1322,10 +1327,15 @@
             { name: "火熱紅", colors: ['#ff6348', '#ff4757'], enabled: true },
             { name: "翡翠綠", colors: ['#1abc9c', '#16a085'], enabled: true },
             { name: "霓虹紫", colors: ['#e056fd', '#686de0'], enabled: true },
-            { name: "黃金橙", colors: ['#ffd32a', '#ff8c00'], enabled: true }
+            { name: "黃金橙", colors: ['#ffd32a', '#ff8c00'], enabled: true },
+            { name: "草莓牛奶", colors: ['#ff4d6d', '#fecfef'], enabled: true }, /* Adjusted Pink */
+            { name: "草莓抹茶", colors: ['#ff4d6d', '#a8e063'], enabled: true }, /* Adjusted Pink */
+            { name: "抹茶拿鐵", colors: ['#56ab2f', '#FFF6E5'], enabled: true }, /* New - Green + Creamy White */
+            { name: "自由國度", colors: ['#ffffff', '#3c3b6e'], enabled: true }  /* Adjusted - Liquid (A) White, Digits (B) US Blue */
         ];
 
         let isNightMode = false, isBlinking = true, isLiquidVisible = true, is24Hour = true, isDateVisible = true, currentPaletteIndex = 0, lastHours = '';
+        let availablePaletteIndices = []; // Smart Shuffle Bag
         let liquidSettings = { opacity: 0.3, rise: 'smooth', surface: 'wave', interact: false, reset: 'instant', scaleWidth: 1.5, waterFill: true, waveHeight: 75 };
 
         // Performance Mode: 'standard', 'powersave', 'ultrasave'
@@ -1768,16 +1778,28 @@
             const now = new Date(); let h = now.getHours(); const m = now.getMinutes(), s = now.getSeconds();
 
             // Automatic Palette Change every hour
+            // Automatic Palette Change every hour (Smart Shuffle)
             if (String(now.getHours()).padStart(2, '0') !== lastHours && lastHours !== '') {
-                // Find next enabled palette
-                let nextIndex = (currentPaletteIndex + 1) % PALETTE_DATA.length;
-                let attempts = 0;
-                while (!PALETTE_DATA[nextIndex].enabled && attempts < PALETTE_DATA.length) {
-                    nextIndex = (nextIndex + 1) % PALETTE_DATA.length;
-                    attempts++;
-                }
-                if (attempts < PALETTE_DATA.length) {
-                    updatePalette(nextIndex, false);
+                // Filter enabled palettes
+                const enabledIndices = PALETTE_DATA.map((p, i) => p.enabled ? i : -1).filter(i => i !== -1);
+
+                if (enabledIndices.length > 0) {
+                    // Refill bag if empty or if it contains disabled indices
+                    const cleanBag = availablePaletteIndices.filter(i => enabledIndices.includes(i));
+                    if (cleanBag.length === 0) {
+                        availablePaletteIndices = [...enabledIndices];
+                    } else {
+                        availablePaletteIndices = cleanBag;
+                    }
+
+                    // Pick one from bag
+                    const randomIndex = Math.floor(Math.random() * availablePaletteIndices.length);
+                    const selectedPaletteIndex = availablePaletteIndices[randomIndex];
+
+                    // Remove from bag
+                    availablePaletteIndices.splice(randomIndex, 1);
+
+                    updatePalette(selectedPaletteIndex, false);
                 }
             }
             lastHours = String(now.getHours()).padStart(2, '0');
@@ -1815,11 +1837,17 @@
                     swapContainer.style.setProperty('--mask-y-px', `${maskYPx}px`);
 
                     // Sync transition with liquid container for smoothness
-                    if (s === 0 && liquidSettings.reset !== 'drain') {
-                        swapContainer.style.transition = 'none';
-                        // Force reflow
-                        swapContainer.offsetHeight;
-                        swapContainer.style.transition = '--mask-y-px 1s linear';
+                    // Sync transition with liquid container for smoothness
+                    if (s === 0) {
+                        if (liquidSettings.reset === 'drain') {
+                            // Fix Request 1: Sync with Drain
+                            swapContainer.style.transition = '--mask-y-px 0.8s ease-out';
+                        } else {
+                            swapContainer.style.transition = 'none';
+                            // Force reflow
+                            swapContainer.offsetHeight;
+                            swapContainer.style.transition = '--mask-y-px 1s linear';
+                        }
                     } else if (liquidSettings.rise === 'step') {
                         swapContainer.style.transition = '--mask-y-px 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
                     } else {
